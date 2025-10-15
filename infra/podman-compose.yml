@@ -11,7 +11,7 @@ services:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       CLUSTER_HOSTNAME: node1
       DEFAULT_VECTORIZER_MODULE: text2vec-ollama
-      ENABLE_MODULES: text2vec-ollama
+      ENABLE_MODULES: text2vec-ollama,generative-ollama
       TEXT2VEC_OLLAMA_API_ENDPOINT: http://ollama:11434
       TEXT2VEC_OLLAMA_MODEL: embeddinggemma
       PERSISTENCE_DATA_PATH: /var/lib/weaviate
