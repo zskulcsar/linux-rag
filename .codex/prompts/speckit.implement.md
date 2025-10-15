@@ -5,7 +5,7 @@ description: Execute the implementation plan by processing and executing all tas
 ## User Input
 
 ```text
-$ARGUMENTS
+Implement $ARGUMENTS only. You **must not** consider any other tasks.
 ```
 
 You **MUST** consider the user input before proceeding (if not empty).
