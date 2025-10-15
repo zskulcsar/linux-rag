@@ -7,3 +7,27 @@
 # Others
 *.kate-swp
 tmp
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Go build outputs
+bin/
+*.exe
+*.test
+*.out
+vendor/
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
