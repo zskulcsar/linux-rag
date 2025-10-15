@@ -1,0 +1,9 @@
+# For direnv
+.env*
+
+# AI tools
+.codex
+
+# Others
+*.kate-swp
+tmp
