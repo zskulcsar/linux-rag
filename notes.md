@@ -51,3 +51,4 @@ This will implement the task which you should verify and commit the changes to g
 
 * This will likely use `protoc` which needs installing. Info @ [protobuf.dev](https://protobuf.dev/installation/); Installed via `sudo apt install -y protobuf-compiler`. This was followed with [goctl](https://go-zero.dev/en/docs/tasks/installation/protoc) and finally adjusting the `$PATH` variable in `~/.profile` such as `export PATH=$PATH:/usr/local/go/bin:/$HOME/go/bin`. Also adding `export GO111MODULE=on` to the `.envrc`.
 * Install the dependencies via `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`
+* At the end of the generation runing `make test-go` fails with module dependencies; here comes T002's next steps `cd src/go && go mod tidy` which pulls all dependencies fixing `make test-go`. Sadly: `[no test files]`, but at least it runs :)
