@@ -17,8 +17,8 @@ dev = [
     "mypy>=1.10",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.6.0",
     "black>=24.3",
     "mypy>=1.10",
