@@ -30,6 +30,7 @@ This will implement the task which you should verify and commit the changes to g
 | T005 | Next up: 1) Align the build instructions with an eventual make cli target so docs and tooling stay in sync; 2) Expand docs as CLI commands are implemented (status, ingest options, troubleshooting). |
 | T006 | Next steps: 1) Ensure the host path /var/lib/linux-rag (or overridden LINUX_RAG_DATA_ROOT) exists with appropriate permissions before bringing the stack up; 2) Update upcoming automation (ragman-admin run) to pass the LINUX_RAG_DATA_ROOT value when launching podman-compose. |
 | T007 | Next steps: 1) Adjust LINUX_RAG_REPO/LINUX_RAG_COMPOSE_FILE in /etc/linux-rag.env for the deployment host; 2) systemctl enable --now linux-rag once Podman and podman-compose are installed. |
+| T008 |   1. git add src/go/internal/contracts/*.pb.go specs/001-linux-rag-specification/contracts/rag_service.proto specs/001-linux-rag-specification/tasks.md 2. Run go test ./... from src/go to confirm the module still builds |
 
 ## Notes
 
@@ -45,3 +46,8 @@ This will implement the task which you should verify and commit the changes to g
 ### T008
 
 * `python3 -m grpc_tools.protoc` fails with `(ModuleNotFoundError: No module named 'grpc_tools')`: 1) `source .venv/bin/activate` for tool use; then 2) `uv pip install grpc_tools` so that codex can run generate the gRPC python code.
+
+### T009
+
+* This will likely use `protoc` which needs installing. Info @ [protobuf.dev](https://protobuf.dev/installation/); Installed via `sudo apt install -y protobuf-compiler`. This was followed with [goctl](https://go-zero.dev/en/docs/tasks/installation/protoc) and finally adjusting the `$PATH` variable in `~/.profile` such as `export PATH=$PATH:/usr/local/go/bin:/$HOME/go/bin`. Also adding `export GO111MODULE=on` to the `.envrc`.
+* Install the dependencies via `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`

@@ -26,7 +26,7 @@
 - [X] T006 Finalize Podman compose stack for Weaviate, Ollama, and shared volumes in `infra/podman-compose.yml`
 - [X] T007 [P] Provide optional systemd unit to launch the stack in `infra/systemd/linux-rag.service`
 - [X] T008 [P] Generate Python gRPC stubs from `contracts/rag_service.proto` into `src/python/linux_rag/contracts/rag_service_pb2.py`
-- [ ] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
+- [X] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
 - [ ] T010 Create Python gRPC application skeleton with server bootstrap in `src/python/linux_rag/server/main.py`
 - [ ] T011 [P] Define shared entities (`KnowledgeSource`, `CacheEntry`) in `src/python/linux_rag/data/models.py`
 - [ ] T012 Establish SQLite schema and migrations for cache/session tables in `src/python/linux_rag/cache/schema.sql`

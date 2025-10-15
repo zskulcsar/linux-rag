@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package linuxrag.v1;
 
+option go_package = "github.com/linux-rag/linux-rag/internal/contracts;contractspb";
+
 // RAG retrieval and admin service consumed by the Go CLIs.
 service RagService {
   // Submit a natural-language query and receive an answer with citations.
