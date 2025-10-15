@@ -15,7 +15,7 @@
 - [X] T002 Initialize Go 1.22 module and cobra dependencies in `src/go/go.mod`
 - [X] T003 [P] Wire lint, format, type-check, and test targets (`ruff`, `black`, `mypy`, `go test`, `pytest`) in `Makefile`
 - [X] T004 Author base runtime configuration with volume defaults in `configs/local.yaml`
-- [ ] T005 [P] Document setup prerequisites and bootstrap flow in `docs/cli.md`
+- [X] T005 [P] Document setup prerequisites and bootstrap flow in `docs/cli.md`
 
 ---
 
