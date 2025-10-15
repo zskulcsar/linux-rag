@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "linux-rag"
+version = "0.1.0"
+description = "Local-first Linux RAG assistant services and tooling."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6.0",
+    "black>=24.3",
+    "mypy>=1.10",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.6.0",
+    "black>=24.3",
+    "mypy>=1.10",
+]

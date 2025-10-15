@@ -11,7 +11,7 @@
 
 **Purpose**: Establish language toolchains, configuration scaffolding, and documentation so engineering work can begin.
 
-- [ ] T001 Configure Python 3.11 project dependencies with uv in `pyproject.toml` (include dev extras for `ruff`, `black`, `mypy`)
+- [X] T001 Configure Python 3.11 project dependencies with uv in `pyproject.toml` (include dev extras for `ruff`, `black`, `mypy`)
 - [ ] T002 Initialize Go 1.22 module and cobra dependencies in `src/go/go.mod`
 - [ ] T003 [P] Wire lint, format, type-check, and test targets (`ruff`, `black`, `mypy`, `go test`, `pytest`) in `Makefile`
 - [ ] T004 Author base runtime configuration with volume defaults in `configs/local.yaml`
