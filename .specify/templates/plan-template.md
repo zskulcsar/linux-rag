@@ -3,7 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command. Refer to the project tooling guide for command usage and required inputs.
 
 ## Summary
 
@@ -11,27 +11,26 @@
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+<!-- Document concrete values for this feature. Defaults should assume Python 3.11+, pytest, and the local Linux execution environment unless deliberately overridden. -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Language/Version**: [Python 3.11 or newer - confirm if different]  
+**Primary Dependencies**: [e.g., FastAPI, Typer, Weaviate client]  
+**Storage**: [e.g., Weaviate, on-disk index, N/A]  
+**Testing**: [pytest + plugins, contract/integration harness]  
+**Target Platform**: [Linux CLI runtime - specify distribution if relevant]
 **Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Performance Goals**: [map to Constitution performance budgets or stricter targets]  
+**Constraints**: [e.g., <2s p95 query latency, <12GB RAM steady state]  
+**Scale/Scope**: [expected dataset size, number of commands, concurrent users]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Code Quality & Python Excellence: Document linting, typing, and review plan; confirm tooling (`ruff`, `mypy`, formatters) in scope.
+- Test Discipline & Safety Net: Outline failing-first test strategy covering unit, integration, and regression cases.
+- Consistent User Experience: Describe CLI interactions, flag conventions, help text updates, and accessibility validation.
+- Performance & Resource Efficiency: Provide measurement approach ensuring query and ingestion budgets stay within required thresholds.
 
 ## Project Structure
 
