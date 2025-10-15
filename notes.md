@@ -41,3 +41,7 @@ This will implement the task which you should verify and commit the changes to g
 ### T006
 
 * TODO: `infra/podman-compose.yml` uses `TEXT2VEC_OLLAMA_API_ENDPOINT` for the weavite service. According to issue [#8406](https://github.com/weaviate/weaviate/issues/8406) this environment variable doesn't exist. Either we can use `host.docker.internal` as per [Configure the vectorizer](https://docs.weaviate.io/weaviate/model-providers/ollama/embeddings#configure-the-vectorizer) which likely [won't work in Linux](https://stackoverflow.com/questions/48546124/what-is-the-linux-equivalent-of-host-docker-internal) or we'll need to find the instructions on how to call `http://ollama:11434`. Anyways - main point is: the variable doesn't exist and needs some code adjusting to explicitly specify the endpoint. Can't be done yet as there is no code.
+
+### T008
+
+* `python3 -m grpc_tools.protoc` fails with `(ModuleNotFoundError: No module named 'grpc_tools')`: 1) `source .venv/bin/activate` for tool use; then 2) `uv pip install grpc_tools` so that codex can run generate the gRPC python code.
