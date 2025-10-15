@@ -16,7 +16,7 @@
 
 ### User Story 1 - Guided Answers for Linux Tasks (Priority: P1)
 
-A Linux user launches the CLI assistant, asks a natural-language question such as "How do I enable automount on boot?", and receives a concise, step-by-step answer with references to source material.
+A Linux user runs the `ragman` CLI, asks a natural-language question such as "How do I enable automount on boot?", and receives a concise, step-by-step answer with references to source material.
 
 **Why this priority**: Delivering accurate, contextual answers is the core value proposition and unlocks immediate utility over traditional `man` pages.
 
@@ -24,14 +24,14 @@ A Linux user launches the CLI assistant, asks a natural-language question such a
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with the assistant installed and knowledge base loaded, **When** they ask "How do I enable automount on boot?", **Then** the tool returns a step-by-step answer referencing relevant manuals or wiki entries.
+1. **Given** a user with the assistant installed and knowledge base loaded, **When** they run `ragman ask "How do I enable automount on boot?"`, **Then** the tool returns a step-by-step answer referencing relevant manuals or wiki entries.
 2. **Given** the user asks a follow-up question related to the previous topic, **When** the assistant processes the query, **Then** the answer incorporates the new request while maintaining context-specific guidance.
 
 ---
 
 ### User Story 2 - Initial Knowledge Base Setup (Priority: P2)
 
-An administrator installs the assistant, runs the initial data load, and confirms local man pages and offline wiki archives are ingested without requiring ongoing internet access.
+An administrator uses the `ragman-admin` CLI to launch the knowledge stack, run the initial data load, and confirm local man pages and offline wiki archives are ingested without requiring ongoing internet access.
 
 **Why this priority**: A reliable setup experience ensures the assistant reflects the user's system documentation and builds trust in the answers provided.
 
@@ -39,14 +39,14 @@ An administrator installs the assistant, runs the initial data load, and confirm
 
 **Acceptance Scenarios**:
 
-1. **Given** a fresh installation, **When** the administrator triggers the data load, **Then** the process completes with progress feedback and a summary of sources ingested, including counts of man pages and wiki articles.
-2. **Given** the ingestion completes, **When** the administrator requests a status report, **Then** the assistant lists available sources and last refresh timestamps.
+1. **Given** a fresh installation, **When** the administrator runs `ragman-admin run` followed by `ragman-admin ingest`, **Then** the process completes with progress feedback and a summary of sources ingested, including counts of man pages and wiki articles.
+2. **Given** the ingestion completes, **When** the administrator requests a status report with `ragman-admin status`, **Then** the assistant lists available sources and last refresh timestamps.
 
 --- 
 
 ### User Story 3 - Source Transparency and Review (Priority: P3)
 
-A power user requests to see the origin documents backing an answer, opens referenced passages, and provides feedback that is stored locally for future review.
+A power user requests to see the origin documents backing an answer, opens referenced passages, and submits feedback via `ragman-admin` that is stored locally for future review.
 
 **Why this priority**: Transparency builds confidence in the assistant's guidance and enables users to verify or escalate documentation gaps.
 
@@ -68,19 +68,21 @@ A power user requests to see the origin documents backing an answer, opens refer
 - Download interruptions during Kiwix archive acquisition must resume cleanly or provide recovery instructions without corrupting partial data.
 - If the Kiwix catalog cannot be reached during setup, the installer must continue without wiki archives and clearly instruct users how to retry downloads later.
 - Cache eviction must prevent storage growth beyond the 10% disk budget, and users must receive guidance when older answers are purged.
+- If `ragman-admin run` fails to launch services, the command must surface actionable remediation steps (missing Podman, port conflicts) instead of leaving partial state.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a CLI command that accepts natural-language Linux administration questions and returns step-by-step answers with cited sources.
+- **FR-001**: System MUST provide the `ragman` CLI that accepts natural-language Linux administration questions and returns step-by-step answers with cited sources.
 - **FR-002**: System MUST ingest local man pages and any wiki archives downloaded during setup, then confirm completion with a status summary.
 - **FR-003**: System MUST allow users to request full source excerpts for any answer and open them in a readable format.
 - **FR-004**: System MUST persist query and response cache entries locally, including raw query text and generated answer content, to accelerate repeat answers.
 - **FR-005**: System MUST validate command usage, handle unsupported flags, and deliver actionable guidance without crashing.
 - **FR-006**: System MUST provide an installation workflow that pulls the latest Kiwix wiki catalog from the Kiwix library API, allows the user to select desired sets, downloads them on demand, and verifies their integrity before ingestion.
-- **FR-007**: System MUST capture user feedback on answer accuracy and retain submissions for review.
-- **FR-008**: System MUST refresh the knowledge base on demand or on a scheduled cadence and report any skipped or failed documents.
+- **FR-007**: System MUST provide the `ragman-admin` CLI with commands for `run`, `status`, `ingest`, `feedback`, and future administrative operations, eliminating the need for direct `podman-compose` or `uv run python -m` usage.
+- **FR-008**: System MUST capture user feedback on answer accuracy and retain submissions for review.
+- **FR-009**: System MUST refresh the knowledge base on demand or on a scheduled cadence and report any skipped or failed documents.
 
 ### Key Entities *(include if feature involves data)*
 

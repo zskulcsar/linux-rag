@@ -108,6 +108,7 @@
 - **NFR-002 (Test Discipline & Safety Net)**: [e.g., "Provide unit, integration, and contract tests that fail prior to implementation"]
 - **NFR-003 (Consistent User Experience)**: [e.g., "Document updated CLI usage and confirm outputs available in JSON + text formats"]
 - **NFR-004 (Performance & Resource Efficiency)**: [e.g., "Demonstrate <2s p95 latency for primary query path using profiling artifact"]
+- **NFR-005 (Configuration Management)**: [e.g., "All service and CLI configuration lives in YAML and validates against documented schema"]
 
 ## Success Criteria *(mandatory)*
 

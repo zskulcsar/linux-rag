@@ -27,10 +27,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Code Quality & Python Excellence: Document linting, typing, and review plan; confirm tooling (`ruff`, `mypy`, formatters) in scope.
-- Test Discipline & Safety Net: Outline failing-first test strategy covering unit, integration, and regression cases.
+- Code Quality & Polyglot Excellence: Document linting/formatting for Python (`ruff`, `black`, `mypy`) and Go (`go fmt`, `golangci-lint`, `staticcheck`); confirm review checklist enforces both.
+- Test Discipline & Safety Net: Outline failing-first test strategy covering unit, integration, regression, and CLI workflows across languages.
 - Consistent User Experience: Describe CLI interactions, flag conventions, help text updates, and accessibility validation.
 - Performance & Resource Efficiency: Provide measurement approach ensuring query and ingestion budgets stay within required thresholds.
+- Engineering Standards: Note YAML configuration plan (no TOML/JSON) and dependency pinning strategy.
 
 ## Project Structure
 
@@ -38,12 +39,12 @@
 
 ```
 specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+|-- plan.md              # This file (/speckit.plan command output)
+|-- research.md          # Phase 0 output (/speckit.plan command)
+|-- data-model.md        # Phase 1 output (/speckit.plan command)
+|-- quickstart.md        # Phase 1 output (/speckit.plan command)
+|-- contracts/           # Phase 1 output (/speckit.plan command)
+`-- tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
@@ -57,37 +58,37 @@ specs/[###-feature]/
 ```
 # [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+|-- models/
+|-- services/
+|-- cli/
+`-- lib/
 
 tests/
-├── contract/
-├── integration/
-└── unit/
+|-- contract/
+|-- integration/
+`-- unit/
 
 # [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+|-- src/
+|   |-- models/
+|   |-- services/
+|   `-- api/
+`-- tests/
 
 frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+|-- src/
+|   |-- components/
+|   |-- pages/
+|   `-- services/
+`-- tests/
 
 # [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/
-└── [same as backend above]
+`-- [same as backend above]
 
 ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+`-- [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real

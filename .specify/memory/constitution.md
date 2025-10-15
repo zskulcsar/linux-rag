@@ -1,20 +1,18 @@
 <!--
 Sync Impact Report
-Version change: n/a -> 1.0.0
+Version change: 1.0.0 -> 1.1.0
 Modified principles:
-- Template Principle 1 placeholder -> Code Quality & Python Excellence
-- Template Principle 2 placeholder -> Test Discipline & Safety Net
-- Template Principle 3 placeholder -> Consistent User Experience
-- Template Principle 4 placeholder -> Performance & Resource Efficiency
+- Code Quality & Python Excellence -> Code Quality & Polyglot Excellence
+- Engineering Standards (expanded with YAML configuration requirement)
 Added sections:
-- Engineering Standards
-- Workflow & Quality Gates
+- None
 Removed sections:
-- Principle V placeholder
+- None
 Templates requiring updates:
 - updated .specify/templates/plan-template.md
 - updated .specify/templates/spec-template.md
 - updated .specify/templates/tasks-template.md
+- updated specs/001-linux-rag-specification/quickstart.md
 Follow-up TODOs:
 - None
 -->
@@ -22,19 +20,22 @@ Follow-up TODOs:
 
 ## Core Principles
 
-### Code Quality & Python Excellence
-All production code MUST target Python 3.11+, conform to PEP 8/PEP 257, use type
-annotations for all public APIs, and pass automated static analysis (`ruff`,
-`mypy`) before merge. Code reviews MUST block changes that reduce readability,
-remove docstrings, or bypass lint/test tooling. Shared utilities SHALL live in
-well-documented modules with clear ownership notes.
+### Code Quality & Polyglot Excellence
+All production Python code MUST target 3.11+, conform to PEP 8/PEP 257, include
+type annotations for public APIs, and pass `ruff`, `black`, and `mypy` gates.
+All Go code MUST build with Go 1.22+, pass `go fmt`/`goimports`, and clear
+`golangci-lint` with `staticcheck`. Code reviews MUST block changes that reduce
+readability, remove tests, or bypass lint/test workflows. Shared utilities
+SHALL live in well-documented modules with explicit ownership and integration
+notes across languages.
 
 ### Test Discipline & Safety Net
 Every change MUST provide automated tests that fail before implementation, then
-pass when the feature lands. Unit, integration, and contract suites MUST run in
-CI and block release on failure. Core modules SHALL keep >=90% statement
-coverage, and critical data flows MUST include regression tests reproducing
-prior incidents. Test fixtures MUST avoid external network calls by default.
+pass when the feature lands. Unit, integration, contract, and CLI regression
+suites MUST run in CI and block release on failure. Python modules SHALL keep
+>=90% statement coverage, Go packages SHALL keep >=85%, and critical data flows
+MUST include regression tests reproducing prior incidents. Test fixtures MUST
+avoid external network calls by default.
 
 ### Consistent User Experience
 CLI commands, flags, and prompts MUST follow a single documented pattern, and
@@ -53,7 +54,10 @@ data plus remediation tasks before merge.
 ## Engineering Standards
 
 - Maintain a single source of truth package under `src/` with reproducible
-  builds managed by `uv`.
+  builds managed by `uv`; Go modules MUST reside under `src/go/` with tidy
+  `go.mod` files.
+- All configuration MUST be expressed in YAML; introducing TOML/JSON/INI
+  requires an approved waiver.
 - All new dependencies REQUIRE security review and pinned versions in lock
   files; transitive updates MUST run through the automated test suite.
 - Observability MUST expose structured logs, latency counters, and retrieval
@@ -82,4 +86,4 @@ for clarifications. Compliance reviews MUST occur quarterly; findings feed into
 the roadmap and cannot be deferred beyond one release cycle without leadership
 sign-off.
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-15 | **Last Amended**: 2025-10-15
+**Version**: 1.1.0 | **Ratified**: 2025-10-15 | **Last Amended**: 2025-10-15

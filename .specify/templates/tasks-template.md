@@ -48,7 +48,8 @@ description: "Task list template for feature implementation"
 - [ ] T001 Create project structure per implementation plan
 - [ ] T002 Initialize Python project tooling (poetry/uv) with locked dependencies
 - [ ] T003 [P] Configure linting (`ruff`), formatting (`black` or `ruff format`), and type checking (`mypy`)
-- [ ] T004 Establish observability scaffolding (structured logging, telemetry hooks)
+- [ ] T004 Create YAML configuration templates with schema validation
+- [ ] T005 Establish observability scaffolding (structured logging, telemetry hooks)
 
 ---
 
@@ -60,12 +61,12 @@ description: "Task list template for feature implementation"
 
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T005 Setup vector database schema and migrations framework
-- [ ] T006 [P] Implement authentication/authorization framework (if feature requires access control)
-- [ ] T007 [P] Setup ingestion and retrieval pipelines with contract boundaries
-- [ ] T008 Create base models/entities that all stories depend on
-- [ ] T009 Configure error handling and logging infrastructure
-- [ ] T010 Define performance baselines and profiling scripts for target commands
+- [ ] T006 Setup vector database schema and migrations framework
+- [ ] T007 [P] Implement authentication/authorization framework (if feature requires access control)
+- [ ] T008 [P] Setup ingestion and retrieval pipelines with contract boundaries
+- [ ] T009 Create base models/entities that all stories depend on
+- [ ] T010 Configure error handling and logging infrastructure
+- [ ] T011 Define performance baselines and profiling scripts for target commands
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -81,20 +82,20 @@ Examples of foundational tasks (adjust based on your project):
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T012 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
-- [ ] T013 [P] [US1] Unit tests for critical modules in tests/unit/test_[name].py
+- [ ] T012 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T013 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T014 [P] [US1] Unit tests for critical modules in tests/unit/test_[name].py
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T015 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T016 [US1] Implement [Service] in src/services/[service].py (depends on T014, T015)
-- [ ] T017 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T018 [US1] Add validation and error handling
-- [ ] T019 [US1] Add logging and telemetry for user story 1 operations
-- [ ] T020 [US1] Update CLI help/man page documentation
-- [ ] T021 [US1] Capture performance measurements and compare against budget
+- [ ] T015 [P] [US1] Create [Entity1] model in src/models/[entity1].py
+- [ ] T016 [P] [US1] Create [Entity2] model in src/models/[entity2].py
+- [ ] T017 [US1] Implement [Service] in src/services/[service].py (depends on T015, T016)
+- [ ] T018 [US1] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T019 [US1] Add validation and error handling
+- [ ] T020 [US1] Add logging and telemetry for user story 1 operations
+- [ ] T021 [US1] Update CLI help/man page documentation
+- [ ] T022 [US1] Capture performance measurements and compare against budget
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -108,18 +109,18 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 2 (MUST run first) (Warning)
 
-- [ ] T022 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T023 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
-- [ ] T024 [P] [US2] Unit tests for critical modules in tests/unit/test_[name].py
+- [ ] T023 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T024 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T025 [P] [US2] Unit tests for critical modules in tests/unit/test_[name].py
 
 ### Implementation for User Story 2
 
-- [ ] T025 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T026 [US2] Implement [Service] in src/services/[service].py
-- [ ] T027 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T028 [US2] Integrate with User Story 1 components (if needed)
-- [ ] T029 [US2] Update documentation and telemetry for new behavior
-- [ ] T030 [US2] Re-run performance validation and report variances
+- [ ] T026 [P] [US2] Create [Entity] model in src/models/[entity].py
+- [ ] T027 [US2] Implement [Service] in src/services/[service].py
+- [ ] T028 [US2] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T029 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T030 [US2] Update documentation and telemetry for new behavior
+- [ ] T031 [US2] Re-run performance validation and report variances
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -133,17 +134,17 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 3 (MUST run first) (Warning)
 
-- [ ] T031 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T032 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
-- [ ] T033 [P] [US3] Unit tests for critical modules in tests/unit/test_[name].py
+- [ ] T032 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T033 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T034 [P] [US3] Unit tests for critical modules in tests/unit/test_[name].py
 
 ### Implementation for User Story 3
 
-- [ ] T034 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T035 [US3] Implement [Service] in src/services/[service].py
-- [ ] T036 [US3] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T037 [US3] Update documentation and telemetry for new behavior
-- [ ] T038 [US3] Re-run performance validation and report variances
+- [ ] T035 [P] [US3] Create [Entity] model in src/models/[entity].py
+- [ ] T036 [US3] Implement [Service] in src/services/[service].py
+- [ ] T037 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T038 [US3] Update documentation and telemetry for new behavior
+- [ ] T039 [US3] Re-run performance validation and report variances
 
 **Checkpoint**: All user stories should now be independently functional
 
