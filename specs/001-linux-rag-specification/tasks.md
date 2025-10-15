@@ -23,7 +23,7 @@
 
 **Purpose**: Provide shared infrastructure, contracts, cache management, and core data scaffolding that all user stories rely on.
 
-- [ ] T006 Finalize Podman compose stack for Weaviate, Ollama, and shared volumes in `infra/podman-compose.yml`
+- [X] T006 Finalize Podman compose stack for Weaviate, Ollama, and shared volumes in `infra/podman-compose.yml`
 - [ ] T007 [P] Provide optional systemd unit to launch the stack in `infra/systemd/linux-rag.service`
 - [ ] T008 [P] Generate Python gRPC stubs from `contracts/rag_service.proto` into `src/python/linux_rag/contracts/rag_service_pb2.py`
 - [ ] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
