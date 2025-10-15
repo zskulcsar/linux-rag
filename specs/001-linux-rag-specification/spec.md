@@ -92,7 +92,7 @@ A power user requests to see the origin documents backing an answer, opens refer
 
 ### Non-Functional Requirements *(align with Constitution)*
 
-- **NFR-001 (Code Quality & Python Excellence)**: All deliverables MUST include type annotations, user-facing documentation, and pass agreed automated linting and typing gates before merge.
+- **NFR-001 (Code Quality & Polyglot Excellence)**: All deliverables MUST include type annotations, user-facing documentation, and pass agreed automated linting and typing gates before merge.
 - **NFR-002 (Test Discipline & Safety Net)**: Automated unit, integration, and regression suites MUST exist for ingestion, querying, and feedback flows, and MUST fail without implementation before passing with completed work.
 - **NFR-003 (Consistent User Experience)**: CLI commands MUST follow project-wide naming and flag conventions, provide both readable and machine-parsable outputs, and remain synchronized with help documentation.
 - **NFR-004 (Performance & Resource Efficiency)**: Query responses MUST achieve p95 latency of 2 seconds or less on reference hardware, ingestion runs MUST complete within 1.5 times baseline duration, and memory usage during querying MUST stay under 12 GB.

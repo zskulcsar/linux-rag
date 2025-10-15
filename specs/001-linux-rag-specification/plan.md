@@ -23,7 +23,7 @@ Deliver a local-first Linux RAG assistant that ingests man pages and optional Ki
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **Code Quality & Python Excellence**: Apply `ruff`, `black`, and `mypy` for Python; `go fmt`, `golangci-lint`, and `staticcheck` for Go. Combined coverage (pytest + go test) must reach Python >=90 percent and Go >=85 percent before merge.
+- **Code Quality & Polyglot Excellence**: Apply `ruff`, `black`, and `mypy` for Python; `go fmt`, `golangci-lint`, and `staticcheck` for Go. Combined coverage (pytest + go test) must reach Python >=90 percent and Go >=85 percent before merge.
 - **Test Discipline & Safety Net**: Failing-first tests per story - pytest unit suites for ingestion/caching, integration tests using podman-compose, gRPC contract tests, and CLI regression harness for `ragman` and `ragman-admin`; CI blocks merges on any failure.
 - **Consistent User Experience**: `ragman` and `ragman-admin` share canonical flag names, support text and JSON outputs, ship markdown help, and update `docs/cli.md`; admin CLI includes `run`, `status`, `ingest`, `feedback`, and future ops commands.
 - **Performance & Resource Efficiency**: Benchmark scripts capture latency, ingestion duration, cache disk usage, and admin CLI service launch times; alerts fire if cache exceeds 10 percent or responses breach 2s p95.
@@ -114,6 +114,8 @@ See `research.md` for decisions and alternatives.
    - Man page ingestion command storing KnowledgeSource records and vectors.
    - Kiwix download + import pipeline with checksum validation and progress events.
    - Ingestion job auditing surfaced via `ragman-admin status`.
+   - Refresh scheduler service (cron/systemd timer wrapper) that triggers periodic ingestion runs and records next-run metadata for status reporting.
+   - Status aggregation endpoint surfacing last successful refresh, failures, and upcoming schedule to satisfy FR-009 transparency requirements.
 3. **Retrieval & Generation**
    - Retriever orchestrating embedding queries, reranking, answer synthesis, and citation formatting.
    - Session persistence capturing model choice, response time, and cache metadata.
@@ -124,4 +126,5 @@ See `research.md` for decisions and alternatives.
    - pytest suites (unit/integration/contract) with coverage enforcement.
    - go test suites for both CLIs, including golden outputs and gRPC mocks.
    - End-to-end CLI workflows verifying ingestion->ask->feedback loops and cache hit metrics.
-   - Performance smoke harness measuring latency, ingestion duration, and cache usage against constitution targets.
+   - Performance smoke harness measuring latency, ingestion duration, cache usage, and memory ceilings against constitution targets.
+   - CI integration that surfaces ingestion benchmark results and resource metrics within `ragman-admin status` and release gates.
