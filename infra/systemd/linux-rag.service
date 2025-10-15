@@ -1,0 +1,22 @@
+[Unit]
+Description=Linux RAG Stack (Podman Compose)
+Requires=network-online.target podman.service
+After=network-online.target podman.service
+
+[Service]
+Type=oneshot
+Environment=LINUX_RAG_REPO=/home/zsoltk/git/linux-rag
+Environment=LINUX_RAG_COMPOSE_FILE=/home/zsoltk/git/linux-rag/infra/podman-compose.yml
+Environment=LINUX_RAG_PROJECT=linux-rag
+Environment=LINUX_RAG_DATA_ROOT=/var/lib/linux-rag
+EnvironmentFile=-/etc/linux-rag.env
+WorkingDirectory=%E{LINUX_RAG_REPO}
+ExecStartPre=/usr/bin/podman-compose -f ${LINUX_RAG_COMPOSE_FILE} --project-name ${LINUX_RAG_PROJECT} down --remove-orphans
+ExecStart=/usr/bin/podman-compose -f ${LINUX_RAG_COMPOSE_FILE} --project-name ${LINUX_RAG_PROJECT} up --detach
+ExecStop=/usr/bin/podman-compose -f ${LINUX_RAG_COMPOSE_FILE} --project-name ${LINUX_RAG_PROJECT} down
+RemainAfterExit=yes
+TimeoutStartSec=180
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target
