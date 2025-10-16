@@ -28,7 +28,7 @@
 - [X] T008 [P] Generate Python gRPC stubs from `contracts/rag_service.proto` into `src/python/linux_rag/contracts/rag_service_pb2.py`
 - [X] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
 - [X] T010 Create Python gRPC application skeleton with server bootstrap in `src/python/linux_rag/server/main.py`
-- [ ] T011 [P] Define shared entities (`KnowledgeSource`, `CacheEntry`) in `src/python/linux_rag/data/models.py`
+- [X] T011 [P] Define shared entities (`KnowledgeSource`, `CacheEntry`) in `src/python/linux_rag/data/models.py`
 - [ ] T012 Establish SQLite schema and migrations for cache/session tables in `src/python/linux_rag/cache/schema.sql`
 - [ ] T013 [P] Implement refresh scheduler service orchestrating on-demand and scheduled ingestion in `src/python/linux_rag/ingestion/scheduler.py`
 - [ ] T014 Persist refresh cadence configuration and next-run metadata for status reporting in `src/python/linux_rag/ingestion/schedule_store.py`
