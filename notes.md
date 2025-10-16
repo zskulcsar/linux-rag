@@ -37,6 +37,7 @@ This will implement the task which you should verify and commit the changes to g
 
 * In order to use [context7](https://context7.com/) the `.codex/prompts/speckit.implement.md` file was modified adding the text before the **## Outline**: `You **MUST** use the configured MCP servers. use context7.`. After this the context7 usage can be seen in the codex cli output.
 * The `.codex/prompts/speckit.implement.md` file can be modified so that the whole prompt doesn't need to be typed every time and `/implement` can be called with a \<task_id\> only.
+* Using the provided `make *` commands after the task implementation is a good idea to verify. On issues ask codex to fix them.
 
 ## Task notes
 
