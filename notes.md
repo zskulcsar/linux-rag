@@ -31,6 +31,7 @@ This will implement the task which you should verify and commit the changes to g
 | T006 | Next steps: 1) Ensure the host path /var/lib/linux-rag (or overridden LINUX_RAG_DATA_ROOT) exists with appropriate permissions before bringing the stack up; 2) Update upcoming automation (ragman-admin run) to pass the LINUX_RAG_DATA_ROOT value when launching podman-compose. |
 | T007 | Next steps: 1) Adjust LINUX_RAG_REPO/LINUX_RAG_COMPOSE_FILE in /etc/linux-rag.env for the deployment host; 2) systemctl enable --now linux-rag once Podman and podman-compose are installed. |
 | T008 |   1. git add src/go/internal/contracts/*.pb.go specs/001-linux-rag-specification/contracts/rag_service.proto specs/001-linux-rag-specification/tasks.md 2. Run go test ./... from src/go to confirm the module still builds |
+| T010 | Next steps: 1) Install PyYAML and the type stub packages once network access is available, then rerun uv sync --dev and mypy. 2) Continue with T011 to fill in shared entity models that the dispatcher will  eventually call. |
 
 ## Notes
 
