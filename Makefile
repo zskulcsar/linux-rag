@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-PYTHON_DISTRIBUTION := uv run
+PYTHON_DISTRIBUTION := .venv/bin/python -m
 PYTHON_DIRS := $(strip $(foreach dir,src/python tests/python,$(if $(wildcard $(dir)),$(dir),)))
 
 .PHONY: help lint format typecheck test test-python test-go format-python lint-python typecheck-python
