@@ -3,6 +3,8 @@ module github.com/linux-rag/linux-rag
 go 1.24.0
 
 require (
+	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.5
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 )
@@ -13,3 +15,7 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 )
+
+replace github.com/spf13/cobra => ./vendor/github.com/spf13/cobra
+
+replace github.com/spf13/pflag => ./vendor/github.com/spf13/pflag

@@ -56,7 +56,20 @@ This will implement the task which you should verify and commit the changes to g
 * Install the dependencies via `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`
 * At the end of the generation runing `make test-go` fails with module dependencies; here comes T002's next steps `cd src/go && go mod tidy` which pulls all dependencies fixing `make test-go`. Sadly: `[no test files]`, but at least it runs :)
 
-### T028
+### T025
 
 * `src/python/linux_rag/server/handlers/ask.py: tightened imports, relaxed type annotations to Any` - not the best, but `make lint typecheck` works :)
 * Also `ignore_missing_imports = True`, I mean ...
+
+### T026
+
+* First try didn't use spf13/cobra. it wasn't bad, but we asked for Cobra (although not much mention but T026 mentionds it and codex asked for specs via context7) - asked to rewrite (next time include, "use context7") ... and it did.
+* But network access is not allowed in the sandbox, hence generating minimal api under vendor.
+* also, test are failing `cd src/go && GOCACHE=$(pwd)/.gocache GOMODCACHE=$(pwd)/.gomodcache go test ./...`, asked codex about it, the answer as follows:
+> 1. Regenerate the vendor manifest so `modules.txt` lists every dependency exactly the way the Go toolchain expects. Normally you do this with `go mod vendor`, which fills `vendor/` and writes the correct metadata;
+    if we need offline copies we can run it in an environment with network access, then commit the resulting `vendor` tree.
+> 2. If we’re keeping local replacements (e.g., our shim Cobra/pflag implementations), we must keep the replace directives in `go.mod` and ensure `modules.txt` includes the `## replace` lines the toolchain generates.
+> 3. Alternatively, if we don’t truly need vendoring, we could remove the `vendor/` directory so Go stops enforcing `modules.txt`; but that only works if we regain network access.
+
+#### Where we left off
+codex resume 0199eeaa-5207-7c22-8c9b-bed94f73cb5c
