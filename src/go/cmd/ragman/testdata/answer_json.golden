@@ -1,0 +1,22 @@
+{
+  "query": "How do I enable automount on boot?",
+  "session_id": "session-123",
+  "answer": "Use systemd automount units to mount the share on-demand.",
+  "model": "gemma3:1b",
+  "response_time_ms": 842,
+  "cache_hit": false,
+  "citations": [
+    {
+      "id": "doc-1",
+      "title": "systemd.automount - Automount unit configuration",
+      "snippet": "Create an automount unit pointing at your mount unit.",
+      "source_path": "/var/lib/linux-rag/man/systemd.automount"
+    },
+    {
+      "id": "doc-2",
+      "title": "fstab best practices",
+      "snippet": "Use noauto,x-systemd.automount to enable lazy mounting.",
+      "source_path": "/var/lib/linux-rag/wiki/fstab-best-practices"
+    }
+  ]
+}

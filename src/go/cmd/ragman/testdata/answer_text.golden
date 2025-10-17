@@ -1,0 +1,16 @@
+Question: How do I enable automount on boot?
+Session: session-123
+Model: gemma3:1b
+Latency: 842ms
+Cache: miss
+
+Use systemd automount units to mount the share on-demand.
+
+Sources:
+[1] systemd.automount - Automount unit configuration
+    /var/lib/linux-rag/man/systemd.automount
+    Create an automount unit pointing at your mount unit.
+
+[2] fstab best practices
+    /var/lib/linux-rag/wiki/fstab-best-practices
+    Use noauto,x-systemd.automount to enable lazy mounting.
