@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS answer_sessions (
     response_text TEXT NOT NULL,
     model_used TEXT NOT NULL,
     response_time_ms INTEGER NOT NULL CHECK (response_time_ms >= 0),
-    cache_hit INTEGER NOT NULL CHECK (cache_hit IN (0, 1)),
-    created_at TEXT NOT NULL,
+    cache_hit INTEGER NOT NULL DEFAULT 0 CHECK (cache_hit IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     feedback_id TEXT
 );
 
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS answer_session_sources (
 CREATE TABLE IF NOT EXISTS cache_entries (
     fingerprint TEXT PRIMARY KEY,
     session_id TEXT NOT NULL UNIQUE,
-    stored_at TEXT NOT NULL,
-    last_accessed_at TEXT NOT NULL,
+    stored_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    last_accessed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
     FOREIGN KEY (session_id) REFERENCES answer_sessions(id)
         ON DELETE CASCADE
@@ -53,6 +53,9 @@ CREATE INDEX IF NOT EXISTS idx_answer_sessions_created_at
 
 CREATE INDEX IF NOT EXISTS idx_answer_sessions_cache_hit
     ON answer_sessions (cache_hit);
+
+CREATE INDEX IF NOT EXISTS idx_answer_session_sources_source
+    ON answer_session_sources (source_id);
 
 CREATE INDEX IF NOT EXISTS idx_cache_entries_last_accessed
     ON cache_entries (last_accessed_at);

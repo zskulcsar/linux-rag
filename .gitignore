@@ -23,6 +23,8 @@ bin/
 *.test
 *.out
 vendor/
+.gocache/
+.gomodcache/
 
 # Editor and OS noise
 .DS_Store

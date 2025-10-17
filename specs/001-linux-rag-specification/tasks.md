@@ -49,7 +49,7 @@
 - [X] T018 [P] [US1] Add CLI integration test for `ragman ask` workflow in `tests/python/integration/test_ragman_cli.py`
 - [X] T019 [P] [US1] Add unit tests for retrieval and ranking pipeline in `tests/python/unit/test_retrieval_pipeline.py`
 - [X] T020 [P] [US1] Add unit tests for cache eviction worker enforcing budget in `tests/python/unit/test_cache_eviction.py`
-- [ ] T021 [P] [US1] Add Go unit tests for `ragman` flag validation and error guidance in `src/go/cmd/ragman/main_test.go`
+- [X] T021 [P] [US1] Add Go unit tests for `ragman` flag validation and error guidance in `src/go/cmd/ragman/main_test.go`
 - [ ] T022 [P] [US1] Add Go golden output tests for `ragman` JSON/text rendering in `src/go/cmd/ragman/output_test.go`
 
 ### Implementation for User Story 1
