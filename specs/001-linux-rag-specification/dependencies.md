@@ -15,11 +15,11 @@ This document captures required development tools and runtime dependencies refer
 | golangci-lint | Go linting bundle | T021, T022, T026-T028, T035, T036, T042-T044, T052 | present | n/a |
 | staticcheck | Go static analysis | T021, T022, T026-T028, T035, T036, T042-T044, T052 | present | n/a |
 | Podman | Container orchestration | T037, T038, T042, T044, T054 | present | n/a |
-| podman-compose | Compose stack management | T037, T042, T054 | missing | `pip install --user podman-compose` |
+| podman-compose | Compose stack management | T037, T042, T054 | present | n/a |
 | Ollama | Local model runtime | T024, T041, T054 | present | n/a |
 | weaviate-python-client | Vector DB client | T023, T038 | present | n/a |
 | grpcio | Python gRPC support | T010, T017, T031, T041, T046, T051 | present | n/a |
 | protoc | Proto compiler | T017, T031, T046 | present | n/a |
-| kiwix-manage | Manage Kiwix archives | T039, T042, T047 | missing | `sudo apt-get install kiwix-tools` |
-| kiwix-serve | Serve Kiwix content | T039, T042, T047 | missing | `sudo apt-get install kiwix-tools` |
-| sqlite3 | Inspect SQLite cache | T012, T029, T040, T050 | missing | `sudo apt-get install sqlite3` |
+| kiwix-manage | Manage Kiwix archives | T039, T042, T047 | present | n/a |
+| kiwix-serve | Serve Kiwix content | T039, T042, T047 | present | n/a |
+| sqlite3 | Inspect SQLite cache | T012, T029, T040, T050 | present | n/a |
