@@ -38,6 +38,7 @@ This will implement the task which you should verify and commit the changes to g
 * In order to use [context7](https://context7.com/) the `.codex/prompts/speckit.implement.md` file was modified adding the text before the **## Outline**: `You **MUST** use the configured MCP servers. use context7.`. After this the context7 usage can be seen in the codex cli output.
 * The `.codex/prompts/speckit.implement.md` file can be modified so that the whole prompt doesn't need to be typed every time and `/implement` can be called with a \<task_id\> only.
 * Using the provided `make *` commands after the task implementation is a good idea to verify. On issues ask codex to fix them.
+* Method documentation is really nothing, will need to fix later
 
 ## Task notes
 
@@ -54,3 +55,8 @@ This will implement the task which you should verify and commit the changes to g
 * This will likely use `protoc` which needs installing. Info @ [protobuf.dev](https://protobuf.dev/installation/); Installed via `sudo apt install -y protobuf-compiler`. This was followed with [goctl](https://go-zero.dev/en/docs/tasks/installation/protoc) and finally adjusting the `$PATH` variable in `~/.profile` such as `export PATH=$PATH:/usr/local/go/bin:/$HOME/go/bin`. Also adding `export GO111MODULE=on` to the `.envrc`.
 * Install the dependencies via `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`
 * At the end of the generation runing `make test-go` fails with module dependencies; here comes T002's next steps `cd src/go && go mod tidy` which pulls all dependencies fixing `make test-go`. Sadly: `[no test files]`, but at least it runs :)
+
+### T028
+
+* `src/python/linux_rag/server/handlers/ask.py: tightened imports, relaxed type annotations to Any` - not the best, but `make lint typecheck` works :)
+* Also `ignore_missing_imports = True`, I mean ...

@@ -48,8 +48,14 @@ class ServerConfig:
 class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
     """Placeholder service; concrete handlers will be composed in future tasks."""
 
+    def __init__(self, *, ask_handler=None) -> None:
+        super().__init__()
+        self._ask_handler = ask_handler
+
     async def Ask(self, request, context):  # type: ignore[override]
-        raise NotImplementedError("Ask handler not implemented yet.")
+        if self._ask_handler is None:
+            context.abort(grpc.StatusCode.UNIMPLEMENTED, "Ask handler not configured.")
+        return await self._ask_handler.handle(request, context)  # type: ignore[no-any-return]
 
     async def RunIngestion(self, request, context):  # type: ignore[override]
         raise NotImplementedError("RunIngestion handler not implemented yet.")
