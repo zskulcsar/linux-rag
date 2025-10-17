@@ -33,7 +33,7 @@
 - [X] T013 [P] Implement refresh scheduler service orchestrating on-demand and scheduled ingestion in `src/python/linux_rag/ingestion/scheduler.py`
 - [X] T014 Persist refresh cadence configuration and next-run metadata for status reporting in `src/python/linux_rag/ingestion/schedule_store.py`
 - [X] T015 [P] Implement cache eviction worker enforcing disk budget in `src/python/linux_rag/cache/eviction.py`
-- [ ] T016 Instrument eviction telemetry (counters, gauges) exposed to status reporting in `src/python/linux_rag/cache/telemetry.py`
+- [X] T016 Instrument eviction telemetry (counters, gauges) exposed to status reporting in `src/python/linux_rag/cache/telemetry.py`
 
 ---
 
