@@ -55,7 +55,7 @@
 ### Implementation for User Story 1
 
 - [X] T023 [P] [US1] Implement retrieval orchestrator that queries Weaviate and reranks candidates in `src/python/linux_rag/retrieval/pipeline.py`
-- [ ] T024 [P] [US1] Implement answer synthesis with Ollama models and citation assembly in `src/python/linux_rag/llm/response_builder.py`
+- [X] T024 [P] [US1] Implement answer synthesis with Ollama models and citation assembly in `src/python/linux_rag/llm/response_builder.py`
 - [ ] T025 [US1] Wire `Ask` gRPC handler and cache integration in `src/python/linux_rag/server/handlers/ask.py`
 - [ ] T026 [US1] Implement `ragman` cobra command with flags (`--model`, `--format`, `--no-cache`) in `src/go/cmd/ragman/main.go`
 - [ ] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
