@@ -3,13 +3,12 @@
 # NO CHECKED-IN PROTOBUF GENCODE
 # source: rag_service.proto
 # Protobuf Python Version: 6.31.1
-# mypy: ignore-errors
 """Generated protocol buffer code."""
-from google.protobuf import descriptor as _descriptor
-from google.protobuf import descriptor_pool as _descriptor_pool
-from google.protobuf import runtime_version as _runtime_version
-from google.protobuf import symbol_database as _symbol_database
-from google.protobuf.internal import builder as _builder
+from google.protobuf import descriptor as _descriptor  # type: ignore[import-untyped]
+from google.protobuf import descriptor_pool as _descriptor_pool  # type: ignore[import-untyped]
+from google.protobuf import runtime_version as _runtime_version  # type: ignore[import-untyped]
+from google.protobuf import symbol_database as _symbol_database  # type: ignore[import-untyped]
+from google.protobuf.internal import builder as _builder  # type: ignore[import-untyped]
 _runtime_version.ValidateProtobufRuntimeVersion(
     _runtime_version.Domain.PUBLIC,
     6,
@@ -25,13 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11rag_service.proto\x12\x0blinuxrag.v1\"e\n\nAskRequest\x12\x12\n\nquery_text\x18\x01 \x01(\t\x12\x15\n\rcontext_hints\x18\x02 \x03(\t\x12\x17\n\x0fpreferred_model\x18\x03 \x01(\t\x12\x13\n\x0b\x61llow_cache\x18\x04 \x01(\x08\"\x8d\x01\n\x0b\x41skResponse\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x13\n\x0b\x61nswer_text\x18\x02 \x01(\t\x12(\n\tcitations\x18\x03 \x03(\x0b\x32\x15.linuxrag.v1.Citation\x12\x11\n\tcache_hit\x18\x04 \x01(\x08\x12\x18\n\x10response_time_ms\x18\x05 \x01(\x03\"R\n\x08\x43itation\x12\x11\n\tsource_id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07snippet\x18\x03 \x01(\t\x12\x13\n\x0bsource_path\x18\x04 \x01(\t\"J\n\x13RunIngestionRequest\x12\x18\n\x10wiki_archive_ids\x18\x01 \x03(\t\x12\x19\n\x11refresh_man_pages\x18\x02 \x01(\x08\"\x91\x01\n\x14RunIngestionResponse\x12\x0e\n\x06job_id\x18\x01 \x01(\t\x12\x1b\n\x13man_pages_processed\x18\x02 \x01(\x03\x12\x1f\n\x17wiki_articles_processed\x18\x03 \x01(\x03\x12+\n\x06\x65rrors\x18\x04 \x03(\x0b\x32\x1b.linuxrag.v1.IngestionError\"7\n\x0eIngestionError\x12\x0e\n\x06source\x18\x01 \x01(\t\x12\x15\n\rerror_message\x18\x02 \x01(\t\"\x12\n\x10GetStatusRequest\"\xad\x01\n\x11GetStatusResponse\x12\x15\n\rlatest_job_id\x18\x01 \x01(\t\x12\x19\n\x11latest_job_status\x18\x02 \x01(\t\x12\x1f\n\x17latest_job_completed_at\x18\x03 \x01(\t\x12\x16\n\x0e\x63\x61\x63he_disk_pct\x18\x04 \x01(\x01\x12\x16\n\x0e\x63\x61\x63he_hit_rate\x18\x05 \x01(\x03\x12\x15\n\ractive_models\x18\x06 \x03(\t\"L\n\x15SubmitFeedbackRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0e\n\x06rating\x18\x02 \x01(\t\x12\x0f\n\x07\x63omment\x18\x03 \x01(\t\"=\n\x16SubmitFeedbackResponse\x12\x13\n\x0b\x66\x65\x65\x64\x62\x61\x63k_id\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\"P\n\x13\x43ontrolStackRequest\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x14\n\x0c\x63ompose_file\x18\x02 \x01(\t\x12\x13\n\x0b\x63onfig_path\x18\x03 \x01(\t\"G\n\x14\x43ontrolStackResponse\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t2\x97\x03\n\nRagService\x12\x38\n\x03\x41sk\x12\x17.linuxrag.v1.AskRequest\x1a\x18.linuxrag.v1.AskResponse\x12S\n\x0cRunIngestion\x12 .linuxrag.v1.RunIngestionRequest\x1a!.linuxrag.v1.RunIngestionResponse\x12J\n\tGetStatus\x12\x1d.linuxrag.v1.GetStatusRequest\x1a\x1e.linuxrag.v1.GetStatusResponse\x12Y\n\x0eSubmitFeedback\x12\".linuxrag.v1.SubmitFeedbackRequest\x1a#.linuxrag.v1.SubmitFeedbackResponse\x12S\n\x0c\x43ontrolStack\x12 .linuxrag.v1.ControlStackRequest\x1a!.linuxrag.v1.ControlStackResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11rag_service.proto\x12\x0blinuxrag.v1\"e\n\nAskRequest\x12\x12\n\nquery_text\x18\x01 \x01(\t\x12\x15\n\rcontext_hints\x18\x02 \x03(\t\x12\x17\n\x0fpreferred_model\x18\x03 \x01(\t\x12\x13\n\x0b\x61llow_cache\x18\x04 \x01(\x08\"\x8d\x01\n\x0b\x41skResponse\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x13\n\x0b\x61nswer_text\x18\x02 \x01(\t\x12(\n\tcitations\x18\x03 \x03(\x0b\x32\x15.linuxrag.v1.Citation\x12\x11\n\tcache_hit\x18\x04 \x01(\x08\x12\x18\n\x10response_time_ms\x18\x05 \x01(\x03\"R\n\x08\x43itation\x12\x11\n\tsource_id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07snippet\x18\x03 \x01(\t\x12\x13\n\x0bsource_path\x18\x04 \x01(\t\"J\n\x13RunIngestionRequest\x12\x18\n\x10wiki_archive_ids\x18\x01 \x03(\t\x12\x19\n\x11refresh_man_pages\x18\x02 \x01(\x08\"\x91\x01\n\x14RunIngestionResponse\x12\x0e\n\x06job_id\x18\x01 \x01(\t\x12\x1b\n\x13man_pages_processed\x18\x02 \x01(\x03\x12\x1f\n\x17wiki_articles_processed\x18\x03 \x01(\x03\x12+\n\x06\x65rrors\x18\x04 \x03(\x0b\x32\x1b.linuxrag.v1.IngestionError\"7\n\x0eIngestionError\x12\x0e\n\x06source\x18\x01 \x01(\t\x12\x15\n\rerror_message\x18\x02 \x01(\t\"\x12\n\x10GetStatusRequest\"Q\n\x11IngestionProgress\x12\r\n\x05stage\x18\x01 \x01(\t\x12\x18\n\x10percent_complete\x18\x02 \x01(\x01\x12\x13\n\x0bretry_count\x18\x03 \x01(\x03\"P\n\x0fScheduleSummary\x12\x0f\n\x07\x63\x61\x64\x65nce\x18\x01 \x01(\t\x12\x13\n\x0bnext_run_at\x18\x02 \x01(\t\x12\x17\n\x0flast_success_at\x18\x03 \x01(\t\"\xab\x01\n\x11\x45victionTelemetry\x12\x15\n\rtotal_entries\x18\x01 \x01(\x03\x12\x13\n\x0btotal_bytes\x18\x02 \x01(\x03\x12\x14\n\x0c\x62udget_bytes\x18\x03 \x01(\x03\x12\x18\n\x10last_eviction_at\x18\x04 \x01(\t\x12\x1d\n\x15last_eviction_removed\x18\x05 \x01(\x03\x12\x1b\n\x13last_eviction_bytes\x18\x06 \x01(\x03\"\x96\x03\n\x11GetStatusResponse\x12\x15\n\rlatest_job_id\x18\x01 \x01(\t\x12\x19\n\x11latest_job_status\x18\x02 \x01(\t\x12\x1f\n\x17latest_job_completed_at\x18\x03 \x01(\t\x12\x16\n\x0e\x63\x61\x63he_disk_pct\x18\x04 \x01(\x01\x12\x16\n\x0e\x63\x61\x63he_hit_rate\x18\x05 \x01(\x03\x12\x15\n\ractive_models\x18\x06 \x03(\t\x12\x30\n\x08progress\x18\x07 \x01(\x0b\x32\x1e.linuxrag.v1.IngestionProgress\x12.\n\x08schedule\x18\x08 \x01(\x0b\x32\x1c.linuxrag.v1.ScheduleSummary\x12\x30\n\x08\x65viction\x18\t \x01(\x0b\x32\x1e.linuxrag.v1.EvictionTelemetry\x12\x1b\n\x13man_pages_processed\x18\n \x01(\x03\x12\x1c\n\x14wiki_articles_loaded\x18\x0b \x01(\x03\x12\x18\n\x10ingestion_errors\x18\x0c \x03(\t\"L\n\x15SubmitFeedbackRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0e\n\x06rating\x18\x02 \x01(\t\x12\x0f\n\x07\x63omment\x18\x03 \x01(\t\"=\n\x16SubmitFeedbackResponse\x12\x13\n\x0b\x66\x65\x65\x64\x62\x61\x63k_id\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\"P\n\x13\x43ontrolStackRequest\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x14\n\x0c\x63ompose_file\x18\x02 \x01(\t\x12\x13\n\x0b\x63onfig_path\x18\x03 \x01(\t\"G\n\x14\x43ontrolStackResponse\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t2\x97\x03\n\nRagService\x12\x38\n\x03\x41sk\x12\x17.linuxrag.v1.AskRequest\x1a\x18.linuxrag.v1.AskResponse\x12S\n\x0cRunIngestion\x12 .linuxrag.v1.RunIngestionRequest\x1a!.linuxrag.v1.RunIngestionResponse\x12J\n\tGetStatus\x12\x1d.linuxrag.v1.GetStatusRequest\x1a\x1e.linuxrag.v1.GetStatusResponse\x12Y\n\x0eSubmitFeedback\x12\".linuxrag.v1.SubmitFeedbackRequest\x1a#.linuxrag.v1.SubmitFeedbackResponse\x12S\n\x0c\x43ontrolStack\x12 .linuxrag.v1.ControlStackRequest\x1a!.linuxrag.v1.ControlStackResponseB?Z=github.com/linux-rag/linux-rag/internal/contracts;contractspbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rag_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
+  _globals['DESCRIPTOR']._loaded_options = None
+  _globals['DESCRIPTOR']._serialized_options = b'Z=github.com/linux-rag/linux-rag/internal/contracts;contractspb'
   _globals['_ASKREQUEST']._serialized_start=34
   _globals['_ASKREQUEST']._serialized_end=135
   _globals['_ASKRESPONSE']._serialized_start=138
@@ -46,16 +46,22 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_INGESTIONERROR']._serialized_end=644
   _globals['_GETSTATUSREQUEST']._serialized_start=646
   _globals['_GETSTATUSREQUEST']._serialized_end=664
-  _globals['_GETSTATUSRESPONSE']._serialized_start=667
-  _globals['_GETSTATUSRESPONSE']._serialized_end=840
-  _globals['_SUBMITFEEDBACKREQUEST']._serialized_start=842
-  _globals['_SUBMITFEEDBACKREQUEST']._serialized_end=918
-  _globals['_SUBMITFEEDBACKRESPONSE']._serialized_start=920
-  _globals['_SUBMITFEEDBACKRESPONSE']._serialized_end=981
-  _globals['_CONTROLSTACKREQUEST']._serialized_start=983
-  _globals['_CONTROLSTACKREQUEST']._serialized_end=1063
-  _globals['_CONTROLSTACKRESPONSE']._serialized_start=1065
-  _globals['_CONTROLSTACKRESPONSE']._serialized_end=1136
-  _globals['_RAGSERVICE']._serialized_start=1139
-  _globals['_RAGSERVICE']._serialized_end=1546
+  _globals['_INGESTIONPROGRESS']._serialized_start=666
+  _globals['_INGESTIONPROGRESS']._serialized_end=747
+  _globals['_SCHEDULESUMMARY']._serialized_start=749
+  _globals['_SCHEDULESUMMARY']._serialized_end=829
+  _globals['_EVICTIONTELEMETRY']._serialized_start=832
+  _globals['_EVICTIONTELEMETRY']._serialized_end=1003
+  _globals['_GETSTATUSRESPONSE']._serialized_start=1006
+  _globals['_GETSTATUSRESPONSE']._serialized_end=1412
+  _globals['_SUBMITFEEDBACKREQUEST']._serialized_start=1414
+  _globals['_SUBMITFEEDBACKREQUEST']._serialized_end=1490
+  _globals['_SUBMITFEEDBACKRESPONSE']._serialized_start=1492
+  _globals['_SUBMITFEEDBACKRESPONSE']._serialized_end=1553
+  _globals['_CONTROLSTACKREQUEST']._serialized_start=1555
+  _globals['_CONTROLSTACKREQUEST']._serialized_end=1635
+  _globals['_CONTROLSTACKRESPONSE']._serialized_start=1637
+  _globals['_CONTROLSTACKRESPONSE']._serialized_end=1708
+  _globals['_RAGSERVICE']._serialized_start=1711
+  _globals['_RAGSERVICE']._serialized_end=2118
 # @@protoc_insertion_point(module_scope)

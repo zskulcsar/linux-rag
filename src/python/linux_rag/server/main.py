@@ -21,7 +21,7 @@ from grpc.aio import Server  # type: ignore[import-untyped]
 from linux_rag.contracts import rag_service_pb2_grpc
 from linux_rag.ingestion import IngestionJobStore
 from linux_rag.ingestion.schedule_store import ScheduleStore
-from linux_rag.server.handlers import AdminHandler
+from linux_rag.server.handlers import AdminHandler, CacheSnapshot
 
 try:
     import yaml  # type: ignore[import-untyped]
@@ -31,6 +31,7 @@ except ImportError:  # pragma: no cover - will be caught during runtime bootstra
 DEFAULT_CONFIG_PATH = Path("configs/local.yaml")
 DEFAULT_SOCKET_PATH = Path("/run/linux-rag/rag-service.sock")
 DEFAULT_LOG_LEVEL = "info"
+CACHE_BUDGET_BYTES = 1_073_741_824
 
 
 @dataclass(frozen=True)
@@ -169,27 +170,42 @@ def _prepare_socket(path: Path) -> None:
         path.unlink()
 
 
-def _compute_cache_stats(cache_dir: Path) -> tuple[float, int]:
+def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
     total_bytes = 0
+    total_entries = 0
     if cache_dir.exists():
         for entry in cache_dir.rglob("*"):
             if entry.is_file():
                 try:
-                    total_bytes += entry.stat().st_size
+                    stat = entry.stat()
+                    total_bytes += stat.st_size
+                    total_entries += 1
                 except OSError:  # pragma: no cover - best effort accounting
                     continue
     if total_bytes == 0:
-        return (0.0, 0)
-    disk_pct = min((total_bytes / 1_073_741_824) * 100.0, 100.0)
-    return (disk_pct, 0)
+        return (0.0, 0, total_entries)
+    disk_pct = 0.0
+    if CACHE_BUDGET_BYTES > 0:
+        disk_pct = min((total_bytes / CACHE_BUDGET_BYTES) * 100.0, 100.0)
+    return (disk_pct, total_bytes, total_entries)
 
 
 def _build_admin_handler(config: ServerConfig) -> AdminHandler:
     job_store = IngestionJobStore(config.ingestion_jobs_db)
     schedule_store = ScheduleStore(config.schedule_db_path)
 
-    def cache_snapshot() -> tuple[float, int]:
-        return _compute_cache_stats(config.cache_dir)
+    def cache_snapshot() -> CacheSnapshot:
+        disk_pct, total_bytes, total_entries = _compute_cache_stats(config.cache_dir)
+        return CacheSnapshot(
+            disk_pct=disk_pct,
+            hit_rate=0,
+            total_entries=total_entries,
+            total_bytes=total_bytes,
+            budget_bytes=CACHE_BUDGET_BYTES,
+            last_eviction_at=None,
+            last_eviction_removed=0,
+            last_eviction_bytes=0,
+        )
 
     return AdminHandler(
         job_store=job_store,

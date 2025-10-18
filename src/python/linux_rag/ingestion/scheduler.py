@@ -42,24 +42,28 @@ class SchedulerState:
     running: bool = False
 
 
+async def _noop_runner(_: RefreshRequest) -> None:
+    return None
+
+
 class RefreshScheduler:
     """Coordinates manual and scheduled ingestion runs."""
 
     def __init__(
         self,
-        runner: Callable[[RefreshRequest], Awaitable[None]],
+        runner: Callable[[RefreshRequest], Awaitable[None]] | None = None,
         *,
         cadence: Optional[timedelta] = timedelta(hours=24),
         logger: Optional[logging.Logger] = None,
-        time_source: Callable[[], datetime] = _utcnow,
+        clock: Callable[[], datetime] = _utcnow,
     ) -> None:
         if cadence is not None and cadence.total_seconds() <= 0:
             raise ValueError("cadence must be positive when provided.")
 
-        self._runner = runner
+        self._runner = runner or _noop_runner
         self._cadence = cadence
         self._logger = logger or logging.getLogger(__name__)
-        self._time_source = time_source
+        self._time_source = clock
 
         self._queue: asyncio.Queue[RefreshRequest] = asyncio.Queue()
         self._lock = asyncio.Lock()
@@ -84,6 +88,29 @@ class RefreshScheduler:
             self.state.next_run_at = None
         elif self.state.running:
             self.state.next_run_at = self._time_source() + cadence
+
+    def should_trigger(self, state: SchedulerState) -> bool:
+        """Return whether the cadence elapsed and a new run should start."""
+
+        if self._cadence is None:
+            return False
+        if state.last_run_at is None:
+            return True
+        elapsed = self._time_source() - state.last_run_at
+        return elapsed >= self._cadence
+
+    def with_trigger(self, state: SchedulerState) -> SchedulerState:
+        """Return updated scheduler state after a trigger fires."""
+
+        now = self._time_source()
+        next_run = now + self._cadence if self._cadence is not None else None
+        return SchedulerState(
+            last_run_at=now,
+            last_success_at=state.last_success_at,
+            last_error=state.last_error,
+            next_run_at=next_run,
+            running=state.running,
+        )
 
     async def start(self) -> None:
         """Start the scheduler loop."""

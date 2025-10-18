@@ -6,8 +6,8 @@ import asyncio
 import logging
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Callable, Optional, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Optional
 from uuid import uuid4
 
 import grpc
@@ -24,7 +24,21 @@ from linux_rag.ingestion.schedule_store import ScheduleStore
 
 UTC = timezone.utc
 
-CacheStatsProvider = Callable[[], Tuple[float, int]]
+@dataclass(frozen=True, slots=True)
+class CacheSnapshot:
+    """Snapshot of cache telemetry details exposed to CLI clients."""
+
+    disk_pct: float
+    hit_rate: int
+    total_entries: int
+    total_bytes: int
+    budget_bytes: int
+    last_eviction_at: datetime | None
+    last_eviction_removed: int
+    last_eviction_bytes: int
+
+
+CacheStatsProvider = Callable[[], CacheSnapshot]
 Clock = Callable[[], datetime]
 
 
@@ -37,6 +51,32 @@ def _serialize_timestamp(value: datetime | None, *, fallback: datetime) -> str:
     if ts.tzinfo is None or ts.utcoffset() is None:
         ts = ts.replace(tzinfo=UTC)
     return ts.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _serialize_optional_timestamp(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    if value.tzinfo is None or value.utcoffset() is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _format_timedelta(value: timedelta | None) -> str:
+    if value is None:
+        return ""
+    seconds = int(value.total_seconds())
+    if seconds <= 0:
+        return ""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if secs or not parts:
+        parts.append(f"{secs}s")
+    return "".join(parts)
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +107,18 @@ class AdminHandler:
         self._manpage_root = manpage_root
         self._wiki_ingestor = wiki_ingestor
         self._default_wiki_archives = tuple(default_wiki_archives or ())
-        self._cache_stats_provider = cache_stats_provider or (lambda: (0.0, 0))
+        self._cache_stats_provider = cache_stats_provider or (
+            lambda: CacheSnapshot(
+                disk_pct=0.0,
+                hit_rate=0,
+                total_entries=0,
+                total_bytes=0,
+                budget_bytes=0,
+                last_eviction_at=None,
+                last_eviction_removed=0,
+                last_eviction_bytes=0,
+            )
+        )
         self._active_models = tuple(active_models or ())
         self._clock = clock or _utcnow
         self._logger = logging.getLogger(__name__)
@@ -149,22 +200,52 @@ class AdminHandler:
     async def get_status(self, request, context) -> Any:
         """Handle GetStatus RPC calls."""
 
-        cache_pct, cache_hit_rate = self._cache_stats_provider()
-        latest_job = self._job_store.latest_job()
-        completed_reference = self._clock()
+        cache_stats = self._cache_stats_provider()
+        history = self._job_store.refresh_history()
+        latest_job = history.latest_job
 
-        if latest_job is None and self._schedule_store is not None:
-            state = self._schedule_store.load()
-            completed_reference = state.last_success_at or completed_reference
+        man_pages_processed = 0
+        wiki_articles_processed = 0
+        ingestion_errors: list[str] = []
+        progress_stage = "idle"
+        percent_complete = 0.0
+        retry_count = 0
 
         if latest_job is None:
             latest_job_id = str(uuid4())
             latest_status = IngestionJobStatus.COMPLETED.value
-            completed_at = completed_reference
+            completed_at = history.last_success_at or self._clock()
         else:
             latest_job_id = str(latest_job.job_id)
             latest_status = latest_job.status.value
             completed_at = latest_job.completed_at or latest_job.started_at
+            man_pages_processed = latest_job.man_pages_processed
+            wiki_articles_processed = latest_job.wiki_articles_processed
+            ingestion_errors = [
+                f"{err.source}: {err.message}" if err.source else err.message
+                for err in latest_job.errors
+            ]
+            progress_stage = latest_job.status.value
+            if latest_job.status is IngestionJobStatus.COMPLETED:
+                percent_complete = 100.0
+            elif latest_job.status is IngestionJobStatus.RUNNING:
+                percent_complete = 50.0
+
+        failed_jobs = self._job_store.list_recent_jobs(
+            limit=5,
+            statuses=(IngestionJobStatus.FAILED,),
+        )
+        retry_count = len(failed_jobs)
+
+        cadence = ""
+        next_run_at = ""
+        last_success_at = _serialize_optional_timestamp(history.last_success_at)
+        if self._schedule_store is not None:
+            schedule_state = self._schedule_store.load()
+            cadence = _format_timedelta(schedule_state.cadence)
+            next_run_at = _serialize_optional_timestamp(schedule_state.next_run_at)
+            fallback_success = schedule_state.last_success_at or history.last_success_at
+            last_success_at = _serialize_optional_timestamp(fallback_success)
 
         response = rag_service_pb2.GetStatusResponse(  # type: ignore[attr-defined]
             latest_job_id=latest_job_id,
@@ -173,10 +254,33 @@ class AdminHandler:
                 completed_at,
                 fallback=self._clock(),
             ),
-            cache_disk_pct=float(cache_pct),
-            cache_hit_rate=int(cache_hit_rate),
+            cache_disk_pct=float(cache_stats.disk_pct),
+            cache_hit_rate=int(cache_stats.hit_rate),
             active_models=list(self._active_models),
+            man_pages_processed=man_pages_processed,
+            wiki_articles_loaded=wiki_articles_processed,
+            ingestion_errors=ingestion_errors,
         )
+
+        progress = response.progress
+        progress.stage = progress_stage
+        progress.percent_complete = percent_complete
+        progress.retry_count = retry_count
+
+        if cadence or next_run_at or last_success_at:
+            schedule = response.schedule
+            schedule.cadence = cadence
+            schedule.next_run_at = next_run_at
+            schedule.last_success_at = last_success_at
+
+        eviction = response.eviction
+        eviction.total_entries = cache_stats.total_entries
+        eviction.total_bytes = cache_stats.total_bytes
+        eviction.budget_bytes = cache_stats.budget_bytes
+        eviction.last_eviction_at = _serialize_optional_timestamp(cache_stats.last_eviction_at)
+        eviction.last_eviction_removed = cache_stats.last_eviction_removed
+        eviction.last_eviction_bytes = cache_stats.last_eviction_bytes
+
         return response
 
     def _normalize_errors(self, errors: Iterable[str]) -> list[_ErrorDetails]:
@@ -195,4 +299,4 @@ class AdminHandler:
         return normalized
 
 
-__all__ = ["AdminHandler"]
+__all__ = ["AdminHandler", "CacheSnapshot"]

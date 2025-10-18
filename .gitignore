@@ -19,6 +19,11 @@ venv/
 dist/
 build/
 *.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.uv_cache/
+.uvcache/
 
 # Go build outputs
 bin/

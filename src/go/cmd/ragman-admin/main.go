@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -31,100 +30,6 @@ const (
 var (
 	allowedStatusFormats = []string{string(FormatText), string(FormatJSON)}
 )
-
-// OutputFormat enumerates supported status renderings.
-type OutputFormat string
-
-const (
-	// FormatText renders human-readable text.
-	FormatText OutputFormat = "text"
-	// FormatJSON renders JSON payloads.
-	FormatJSON OutputFormat = "json"
-)
-
-// StatusView captures status fields for presentation.
-type StatusView struct {
-	LatestJobID        string
-	LatestJobStatus    string
-	CacheDiskPercent   float64
-	CacheHitRate       int
-	ActiveModels       []string
-	NextRunAt          string
-	LastSuccessAt      string
-	ManPagesProcessed  int
-	WikiArticlesLoaded int
-	Errors             []string
-}
-
-// RenderStatus formats status output in the requested format.
-func RenderStatus(view StatusView, format OutputFormat) (string, error) {
-	switch format {
-	case FormatText:
-		var b strings.Builder
-		fmt.Fprintf(&b, "Latest ingestion job: %s (%s)\n", view.LatestJobID, view.LatestJobStatus)
-		fmt.Fprintf(&b, "Cache usage: %.1f%%\n", view.CacheDiskPercent)
-		fmt.Fprintf(&b, "Cache hit rate: %d%%\n", view.CacheHitRate)
-		models := strings.Join(view.ActiveModels, ", ")
-		if models == "" {
-			models = "none"
-		}
-		fmt.Fprintf(&b, "Active models: %s\n", models)
-		b.WriteString("\n")
-		if view.NextRunAt != "" {
-			fmt.Fprintf(&b, "Next scheduled run: %s\n", view.NextRunAt)
-		} else {
-			b.WriteString("Next scheduled run: unknown\n")
-		}
-		if view.LastSuccessAt != "" {
-			fmt.Fprintf(&b, "Last successful run: %s\n", view.LastSuccessAt)
-		} else {
-			b.WriteString("Last successful run: unknown\n")
-		}
-		b.WriteString("\n")
-		fmt.Fprintf(&b, "Man pages processed: %d\n", view.ManPagesProcessed)
-		fmt.Fprintf(&b, "Wiki articles loaded: %d\n", view.WikiArticlesLoaded)
-		if len(view.Errors) > 0 {
-			b.WriteString("\nErrors:\n")
-			for _, item := range view.Errors {
-				fmt.Fprintf(&b, "- %s\n", item)
-			}
-		} else {
-			b.WriteString("\n")
-		}
-		return b.String(), nil
-	case FormatJSON:
-		payload := struct {
-			LatestJobID        string   `json:"latest_job_id"`
-			LatestJobStatus    string   `json:"latest_job_status"`
-			CacheDiskPercent   float64  `json:"cache_disk_pct"`
-			CacheHitRate       int      `json:"cache_hit_rate"`
-			ActiveModels       []string `json:"active_models"`
-			NextRunAt          string   `json:"next_run_at"`
-			LastSuccessAt      string   `json:"last_success_at"`
-			ManPagesProcessed  int      `json:"man_pages_processed"`
-			WikiArticlesLoaded int      `json:"wiki_articles_loaded"`
-			Errors             []string `json:"errors"`
-		}{
-			LatestJobID:        view.LatestJobID,
-			LatestJobStatus:    view.LatestJobStatus,
-			CacheDiskPercent:   view.CacheDiskPercent,
-			CacheHitRate:       view.CacheHitRate,
-			ActiveModels:       view.ActiveModels,
-			NextRunAt:          view.NextRunAt,
-			LastSuccessAt:      view.LastSuccessAt,
-			ManPagesProcessed:  view.ManPagesProcessed,
-			WikiArticlesLoaded: view.WikiArticlesLoaded,
-			Errors:             view.Errors,
-		}
-		bytes, err := json.MarshalIndent(payload, "", "  ")
-		if err != nil {
-			return "", err
-		}
-		return string(bytes) + "\n", nil
-	default:
-		return "", fmt.Errorf("unsupported format: %s", format)
-	}
-}
 
 type rootOptions struct {
 	configPath string
@@ -799,14 +704,43 @@ func fetchStatus(ctx context.Context, cfg adminConfig) (StatusView, error) {
 	}
 
 	view := StatusView{
-		LatestJobID:      resp.GetLatestJobId(),
-		LatestJobStatus:  resp.GetLatestJobStatus(),
-		CacheDiskPercent: resp.GetCacheDiskPct(),
-		CacheHitRate:     int(resp.GetCacheHitRate()),
-		ActiveModels:     resp.GetActiveModels(),
-		LastSuccessAt:    resp.GetLatestJobCompletedAt(),
-		Errors:           nil,
+		LatestJobID:        resp.GetLatestJobId(),
+		LatestJobStatus:    resp.GetLatestJobStatus(),
+		CacheDiskPercent:   resp.GetCacheDiskPct(),
+		CacheHitRate:       int(resp.GetCacheHitRate()),
+		ActiveModels:       resp.GetActiveModels(),
+		ManPagesProcessed:  int(resp.GetManPagesProcessed()),
+		WikiArticlesLoaded: int(resp.GetWikiArticlesLoaded()),
+		IngestionErrors:    resp.GetIngestionErrors(),
 	}
+
+	if progress := resp.GetProgress(); progress != nil {
+		view.Progress = ProgressView{
+			Stage:           strings.TrimSpace(progress.GetStage()),
+			PercentComplete: progress.GetPercentComplete(),
+			RetryCount:      int(progress.GetRetryCount()),
+		}
+	}
+
+	if schedule := resp.GetSchedule(); schedule != nil {
+		view.Schedule = ScheduleView{
+			Cadence:       strings.TrimSpace(schedule.GetCadence()),
+			NextRunAt:     strings.TrimSpace(schedule.GetNextRunAt()),
+			LastSuccessAt: strings.TrimSpace(schedule.GetLastSuccessAt()),
+		}
+	}
+
+	if eviction := resp.GetEviction(); eviction != nil {
+		view.Eviction = EvictionView{
+			TotalEntries:        int(eviction.GetTotalEntries()),
+			TotalBytes:          eviction.GetTotalBytes(),
+			BudgetBytes:         eviction.GetBudgetBytes(),
+			LastEvictionAt:      strings.TrimSpace(eviction.GetLastEvictionAt()),
+			LastEvictionRemoved: int(eviction.GetLastEvictionRemoved()),
+			LastEvictionBytes:   eviction.GetLastEvictionBytes(),
+		}
+	}
+
 	return view, nil
 }
 

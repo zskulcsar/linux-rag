@@ -6,11 +6,27 @@
   "active_models": [
     "gemma3:1b"
   ],
-  "next_run_at": "2025-01-02T02:30:00Z",
-  "last_success_at": "2025-01-01T19:45:00Z",
   "man_pages_processed": 222,
   "wiki_articles_loaded": 333,
-  "errors": [
+  "ingestion_errors": [
     "failed to ingest linux-desktop"
-  ]
+  ],
+  "progress": {
+    "stage": "running",
+    "percent_complete": 40,
+    "retry_count": 3
+  },
+  "schedule": {
+    "cadence": "12h30m",
+    "next_run_at": "2025-01-02T02:30:00Z",
+    "last_success_at": "2025-01-01T19:45:00Z"
+  },
+  "eviction": {
+    "total_entries": 512,
+    "total_bytes": 268435456,
+    "budget_bytes": 536870912,
+    "last_eviction_at": "2024-12-31T23:59:00Z",
+    "last_eviction_removed": 7,
+    "last_eviction_bytes": 6543210
+  }
 }

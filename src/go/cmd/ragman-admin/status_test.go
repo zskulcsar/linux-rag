@@ -13,11 +13,26 @@ func TestRenderStatusTextMatchesGolden(t *testing.T) {
 		CacheDiskPercent:   42.5,
 		CacheHitRate:       78,
 		ActiveModels:       []string{"gemma3:1b", "codegemma:2b"},
-		NextRunAt:          "2025-01-01T12:00:00Z",
-		LastSuccessAt:      "2025-01-01T09:00:00Z",
 		ManPagesProcessed:  1234,
 		WikiArticlesLoaded: 567,
-		Errors:             nil,
+		Progress: ProgressView{
+			Stage:           "indexing",
+			PercentComplete: 75.0,
+			RetryCount:      1,
+		},
+		Schedule: ScheduleView{
+			Cadence:       "24h",
+			NextRunAt:     "2025-01-01T12:00:00Z",
+			LastSuccessAt: "2025-01-01T09:00:00Z",
+		},
+		Eviction: EvictionView{
+			TotalEntries:        2048,
+			TotalBytes:          536870912,
+			BudgetBytes:         1073741824,
+			LastEvictionAt:      "",
+			LastEvictionRemoved: 12,
+			LastEvictionBytes:   12345678,
+		},
 	}
 
 	output, err := RenderStatus(view, FormatText)
@@ -38,11 +53,27 @@ func TestRenderStatusJSONMatchesGolden(t *testing.T) {
 		CacheDiskPercent:   65.1,
 		CacheHitRate:       32,
 		ActiveModels:       []string{"gemma3:1b"},
-		NextRunAt:          "2025-01-02T02:30:00Z",
-		LastSuccessAt:      "2025-01-01T19:45:00Z",
 		ManPagesProcessed:  222,
 		WikiArticlesLoaded: 333,
-		Errors:             []string{"failed to ingest linux-desktop"},
+		IngestionErrors:    []string{"failed to ingest linux-desktop"},
+		Progress: ProgressView{
+			Stage:           "running",
+			PercentComplete: 40.0,
+			RetryCount:      3,
+		},
+		Schedule: ScheduleView{
+			Cadence:       "12h30m",
+			NextRunAt:     "2025-01-02T02:30:00Z",
+			LastSuccessAt: "2025-01-01T19:45:00Z",
+		},
+		Eviction: EvictionView{
+			TotalEntries:        512,
+			TotalBytes:          268435456,
+			BudgetBytes:         536870912,
+			LastEvictionAt:      "2024-12-31T23:59:00Z",
+			LastEvictionRemoved: 7,
+			LastEvictionBytes:   6543210,
+		},
 	}
 
 	output, err := RenderStatus(view, FormatJSON)

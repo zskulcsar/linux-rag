@@ -441,6 +441,210 @@ func (*GetStatusRequest) Descriptor() ([]byte, []int) {
 	return file_rag_service_proto_rawDescGZIP(), []int{6}
 }
 
+type IngestionProgress struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Stage           string                 `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`                                              // running, completed, failed, idle
+	PercentComplete float64                `protobuf:"fixed64,2,opt,name=percent_complete,json=percentComplete,proto3" json:"percent_complete,omitempty"` // 0-100
+	RetryCount      int64                  `protobuf:"varint,3,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty"`                 // number of retries attempted during the latest job
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *IngestionProgress) Reset() {
+	*x = IngestionProgress{}
+	mi := &file_rag_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestionProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestionProgress) ProtoMessage() {}
+
+func (x *IngestionProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_rag_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestionProgress.ProtoReflect.Descriptor instead.
+func (*IngestionProgress) Descriptor() ([]byte, []int) {
+	return file_rag_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *IngestionProgress) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+func (x *IngestionProgress) GetPercentComplete() float64 {
+	if x != nil {
+		return x.PercentComplete
+	}
+	return 0
+}
+
+func (x *IngestionProgress) GetRetryCount() int64 {
+	if x != nil {
+		return x.RetryCount
+	}
+	return 0
+}
+
+type ScheduleSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cadence       string                 `protobuf:"bytes,1,opt,name=cadence,proto3" json:"cadence,omitempty"`                                    // human readable cadence (e.g., "24h")
+	NextRunAt     string                 `protobuf:"bytes,2,opt,name=next_run_at,json=nextRunAt,proto3" json:"next_run_at,omitempty"`             // ISO timestamp
+	LastSuccessAt string                 `protobuf:"bytes,3,opt,name=last_success_at,json=lastSuccessAt,proto3" json:"last_success_at,omitempty"` // ISO timestamp
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScheduleSummary) Reset() {
+	*x = ScheduleSummary{}
+	mi := &file_rag_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScheduleSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScheduleSummary) ProtoMessage() {}
+
+func (x *ScheduleSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_rag_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScheduleSummary.ProtoReflect.Descriptor instead.
+func (*ScheduleSummary) Descriptor() ([]byte, []int) {
+	return file_rag_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ScheduleSummary) GetCadence() string {
+	if x != nil {
+		return x.Cadence
+	}
+	return ""
+}
+
+func (x *ScheduleSummary) GetNextRunAt() string {
+	if x != nil {
+		return x.NextRunAt
+	}
+	return ""
+}
+
+func (x *ScheduleSummary) GetLastSuccessAt() string {
+	if x != nil {
+		return x.LastSuccessAt
+	}
+	return ""
+}
+
+type EvictionTelemetry struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TotalEntries        int64                  `protobuf:"varint,1,opt,name=total_entries,json=totalEntries,proto3" json:"total_entries,omitempty"`
+	TotalBytes          int64                  `protobuf:"varint,2,opt,name=total_bytes,json=totalBytes,proto3" json:"total_bytes,omitempty"`
+	BudgetBytes         int64                  `protobuf:"varint,3,opt,name=budget_bytes,json=budgetBytes,proto3" json:"budget_bytes,omitempty"`
+	LastEvictionAt      string                 `protobuf:"bytes,4,opt,name=last_eviction_at,json=lastEvictionAt,proto3" json:"last_eviction_at,omitempty"` // ISO timestamp
+	LastEvictionRemoved int64                  `protobuf:"varint,5,opt,name=last_eviction_removed,json=lastEvictionRemoved,proto3" json:"last_eviction_removed,omitempty"`
+	LastEvictionBytes   int64                  `protobuf:"varint,6,opt,name=last_eviction_bytes,json=lastEvictionBytes,proto3" json:"last_eviction_bytes,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *EvictionTelemetry) Reset() {
+	*x = EvictionTelemetry{}
+	mi := &file_rag_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvictionTelemetry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvictionTelemetry) ProtoMessage() {}
+
+func (x *EvictionTelemetry) ProtoReflect() protoreflect.Message {
+	mi := &file_rag_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvictionTelemetry.ProtoReflect.Descriptor instead.
+func (*EvictionTelemetry) Descriptor() ([]byte, []int) {
+	return file_rag_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *EvictionTelemetry) GetTotalEntries() int64 {
+	if x != nil {
+		return x.TotalEntries
+	}
+	return 0
+}
+
+func (x *EvictionTelemetry) GetTotalBytes() int64 {
+	if x != nil {
+		return x.TotalBytes
+	}
+	return 0
+}
+
+func (x *EvictionTelemetry) GetBudgetBytes() int64 {
+	if x != nil {
+		return x.BudgetBytes
+	}
+	return 0
+}
+
+func (x *EvictionTelemetry) GetLastEvictionAt() string {
+	if x != nil {
+		return x.LastEvictionAt
+	}
+	return ""
+}
+
+func (x *EvictionTelemetry) GetLastEvictionRemoved() int64 {
+	if x != nil {
+		return x.LastEvictionRemoved
+	}
+	return 0
+}
+
+func (x *EvictionTelemetry) GetLastEvictionBytes() int64 {
+	if x != nil {
+		return x.LastEvictionBytes
+	}
+	return 0
+}
+
 type GetStatusResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	LatestJobId          string                 `protobuf:"bytes,1,opt,name=latest_job_id,json=latestJobId,proto3" json:"latest_job_id,omitempty"`
@@ -449,13 +653,19 @@ type GetStatusResponse struct {
 	CacheDiskPct         float64                `protobuf:"fixed64,4,opt,name=cache_disk_pct,json=cacheDiskPct,proto3" json:"cache_disk_pct,omitempty"`                         // 0-100
 	CacheHitRate         int64                  `protobuf:"varint,5,opt,name=cache_hit_rate,json=cacheHitRate,proto3" json:"cache_hit_rate,omitempty"`                          // Percent
 	ActiveModels         []string               `protobuf:"bytes,6,rep,name=active_models,json=activeModels,proto3" json:"active_models,omitempty"`
+	Progress             *IngestionProgress     `protobuf:"bytes,7,opt,name=progress,proto3" json:"progress,omitempty"`
+	Schedule             *ScheduleSummary       `protobuf:"bytes,8,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	Eviction             *EvictionTelemetry     `protobuf:"bytes,9,opt,name=eviction,proto3" json:"eviction,omitempty"`
+	ManPagesProcessed    int64                  `protobuf:"varint,10,opt,name=man_pages_processed,json=manPagesProcessed,proto3" json:"man_pages_processed,omitempty"`
+	WikiArticlesLoaded   int64                  `protobuf:"varint,11,opt,name=wiki_articles_loaded,json=wikiArticlesLoaded,proto3" json:"wiki_articles_loaded,omitempty"`
+	IngestionErrors      []string               `protobuf:"bytes,12,rep,name=ingestion_errors,json=ingestionErrors,proto3" json:"ingestion_errors,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetStatusResponse) Reset() {
 	*x = GetStatusResponse{}
-	mi := &file_rag_service_proto_msgTypes[7]
+	mi := &file_rag_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +677,7 @@ func (x *GetStatusResponse) String() string {
 func (*GetStatusResponse) ProtoMessage() {}
 
 func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rag_service_proto_msgTypes[7]
+	mi := &file_rag_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +690,7 @@ func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetStatusResponse) Descriptor() ([]byte, []int) {
-	return file_rag_service_proto_rawDescGZIP(), []int{7}
+	return file_rag_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetStatusResponse) GetLatestJobId() string {
@@ -525,6 +735,48 @@ func (x *GetStatusResponse) GetActiveModels() []string {
 	return nil
 }
 
+func (x *GetStatusResponse) GetProgress() *IngestionProgress {
+	if x != nil {
+		return x.Progress
+	}
+	return nil
+}
+
+func (x *GetStatusResponse) GetSchedule() *ScheduleSummary {
+	if x != nil {
+		return x.Schedule
+	}
+	return nil
+}
+
+func (x *GetStatusResponse) GetEviction() *EvictionTelemetry {
+	if x != nil {
+		return x.Eviction
+	}
+	return nil
+}
+
+func (x *GetStatusResponse) GetManPagesProcessed() int64 {
+	if x != nil {
+		return x.ManPagesProcessed
+	}
+	return 0
+}
+
+func (x *GetStatusResponse) GetWikiArticlesLoaded() int64 {
+	if x != nil {
+		return x.WikiArticlesLoaded
+	}
+	return 0
+}
+
+func (x *GetStatusResponse) GetIngestionErrors() []string {
+	if x != nil {
+		return x.IngestionErrors
+	}
+	return nil
+}
+
 type SubmitFeedbackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -536,7 +788,7 @@ type SubmitFeedbackRequest struct {
 
 func (x *SubmitFeedbackRequest) Reset() {
 	*x = SubmitFeedbackRequest{}
-	mi := &file_rag_service_proto_msgTypes[8]
+	mi := &file_rag_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +800,7 @@ func (x *SubmitFeedbackRequest) String() string {
 func (*SubmitFeedbackRequest) ProtoMessage() {}
 
 func (x *SubmitFeedbackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rag_service_proto_msgTypes[8]
+	mi := &file_rag_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,7 +813,7 @@ func (x *SubmitFeedbackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitFeedbackRequest.ProtoReflect.Descriptor instead.
 func (*SubmitFeedbackRequest) Descriptor() ([]byte, []int) {
-	return file_rag_service_proto_rawDescGZIP(), []int{8}
+	return file_rag_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SubmitFeedbackRequest) GetSessionId() string {
@@ -595,7 +847,7 @@ type SubmitFeedbackResponse struct {
 
 func (x *SubmitFeedbackResponse) Reset() {
 	*x = SubmitFeedbackResponse{}
-	mi := &file_rag_service_proto_msgTypes[9]
+	mi := &file_rag_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -607,7 +859,7 @@ func (x *SubmitFeedbackResponse) String() string {
 func (*SubmitFeedbackResponse) ProtoMessage() {}
 
 func (x *SubmitFeedbackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rag_service_proto_msgTypes[9]
+	mi := &file_rag_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -620,7 +872,7 @@ func (x *SubmitFeedbackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitFeedbackResponse.ProtoReflect.Descriptor instead.
 func (*SubmitFeedbackResponse) Descriptor() ([]byte, []int) {
-	return file_rag_service_proto_rawDescGZIP(), []int{9}
+	return file_rag_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SubmitFeedbackResponse) GetFeedbackId() string {
@@ -648,7 +900,7 @@ type ControlStackRequest struct {
 
 func (x *ControlStackRequest) Reset() {
 	*x = ControlStackRequest{}
-	mi := &file_rag_service_proto_msgTypes[10]
+	mi := &file_rag_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -660,7 +912,7 @@ func (x *ControlStackRequest) String() string {
 func (*ControlStackRequest) ProtoMessage() {}
 
 func (x *ControlStackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rag_service_proto_msgTypes[10]
+	mi := &file_rag_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -673,7 +925,7 @@ func (x *ControlStackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlStackRequest.ProtoReflect.Descriptor instead.
 func (*ControlStackRequest) Descriptor() ([]byte, []int) {
-	return file_rag_service_proto_rawDescGZIP(), []int{10}
+	return file_rag_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ControlStackRequest) GetAction() string {
@@ -708,7 +960,7 @@ type ControlStackResponse struct {
 
 func (x *ControlStackResponse) Reset() {
 	*x = ControlStackResponse{}
-	mi := &file_rag_service_proto_msgTypes[11]
+	mi := &file_rag_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -720,7 +972,7 @@ func (x *ControlStackResponse) String() string {
 func (*ControlStackResponse) ProtoMessage() {}
 
 func (x *ControlStackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rag_service_proto_msgTypes[11]
+	mi := &file_rag_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -733,7 +985,7 @@ func (x *ControlStackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlStackResponse.ProtoReflect.Descriptor instead.
 func (*ControlStackResponse) Descriptor() ([]byte, []int) {
-	return file_rag_service_proto_rawDescGZIP(), []int{11}
+	return file_rag_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ControlStackResponse) GetAction() string {
@@ -795,14 +1047,38 @@ const file_rag_service_proto_rawDesc = "" +
 	"\x0eIngestionError\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12#\n" +
 	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"\x12\n" +
-	"\x10GetStatusRequest\"\x8b\x02\n" +
+	"\x10GetStatusRequest\"u\n" +
+	"\x11IngestionProgress\x12\x14\n" +
+	"\x05stage\x18\x01 \x01(\tR\x05stage\x12)\n" +
+	"\x10percent_complete\x18\x02 \x01(\x01R\x0fpercentComplete\x12\x1f\n" +
+	"\vretry_count\x18\x03 \x01(\x03R\n" +
+	"retryCount\"s\n" +
+	"\x0fScheduleSummary\x12\x18\n" +
+	"\acadence\x18\x01 \x01(\tR\acadence\x12\x1e\n" +
+	"\vnext_run_at\x18\x02 \x01(\tR\tnextRunAt\x12&\n" +
+	"\x0flast_success_at\x18\x03 \x01(\tR\rlastSuccessAt\"\x8a\x02\n" +
+	"\x11EvictionTelemetry\x12#\n" +
+	"\rtotal_entries\x18\x01 \x01(\x03R\ftotalEntries\x12\x1f\n" +
+	"\vtotal_bytes\x18\x02 \x01(\x03R\n" +
+	"totalBytes\x12!\n" +
+	"\fbudget_bytes\x18\x03 \x01(\x03R\vbudgetBytes\x12(\n" +
+	"\x10last_eviction_at\x18\x04 \x01(\tR\x0elastEvictionAt\x122\n" +
+	"\x15last_eviction_removed\x18\x05 \x01(\x03R\x13lastEvictionRemoved\x12.\n" +
+	"\x13last_eviction_bytes\x18\x06 \x01(\x03R\x11lastEvictionBytes\"\xca\x04\n" +
 	"\x11GetStatusResponse\x12\"\n" +
 	"\rlatest_job_id\x18\x01 \x01(\tR\vlatestJobId\x12*\n" +
 	"\x11latest_job_status\x18\x02 \x01(\tR\x0flatestJobStatus\x125\n" +
 	"\x17latest_job_completed_at\x18\x03 \x01(\tR\x14latestJobCompletedAt\x12$\n" +
 	"\x0ecache_disk_pct\x18\x04 \x01(\x01R\fcacheDiskPct\x12$\n" +
 	"\x0ecache_hit_rate\x18\x05 \x01(\x03R\fcacheHitRate\x12#\n" +
-	"\ractive_models\x18\x06 \x03(\tR\factiveModels\"h\n" +
+	"\ractive_models\x18\x06 \x03(\tR\factiveModels\x12:\n" +
+	"\bprogress\x18\a \x01(\v2\x1e.linuxrag.v1.IngestionProgressR\bprogress\x128\n" +
+	"\bschedule\x18\b \x01(\v2\x1c.linuxrag.v1.ScheduleSummaryR\bschedule\x12:\n" +
+	"\beviction\x18\t \x01(\v2\x1e.linuxrag.v1.EvictionTelemetryR\beviction\x12.\n" +
+	"\x13man_pages_processed\x18\n" +
+	" \x01(\x03R\x11manPagesProcessed\x120\n" +
+	"\x14wiki_articles_loaded\x18\v \x01(\x03R\x12wikiArticlesLoaded\x12)\n" +
+	"\x10ingestion_errors\x18\f \x03(\tR\x0fingestionErrors\"h\n" +
 	"\x15SubmitFeedbackRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
@@ -841,7 +1117,7 @@ func file_rag_service_proto_rawDescGZIP() []byte {
 	return file_rag_service_proto_rawDescData
 }
 
-var file_rag_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_rag_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_rag_service_proto_goTypes = []any{
 	(*AskRequest)(nil),             // 0: linuxrag.v1.AskRequest
 	(*AskResponse)(nil),            // 1: linuxrag.v1.AskResponse
@@ -850,30 +1126,36 @@ var file_rag_service_proto_goTypes = []any{
 	(*RunIngestionResponse)(nil),   // 4: linuxrag.v1.RunIngestionResponse
 	(*IngestionError)(nil),         // 5: linuxrag.v1.IngestionError
 	(*GetStatusRequest)(nil),       // 6: linuxrag.v1.GetStatusRequest
-	(*GetStatusResponse)(nil),      // 7: linuxrag.v1.GetStatusResponse
-	(*SubmitFeedbackRequest)(nil),  // 8: linuxrag.v1.SubmitFeedbackRequest
-	(*SubmitFeedbackResponse)(nil), // 9: linuxrag.v1.SubmitFeedbackResponse
-	(*ControlStackRequest)(nil),    // 10: linuxrag.v1.ControlStackRequest
-	(*ControlStackResponse)(nil),   // 11: linuxrag.v1.ControlStackResponse
+	(*IngestionProgress)(nil),      // 7: linuxrag.v1.IngestionProgress
+	(*ScheduleSummary)(nil),        // 8: linuxrag.v1.ScheduleSummary
+	(*EvictionTelemetry)(nil),      // 9: linuxrag.v1.EvictionTelemetry
+	(*GetStatusResponse)(nil),      // 10: linuxrag.v1.GetStatusResponse
+	(*SubmitFeedbackRequest)(nil),  // 11: linuxrag.v1.SubmitFeedbackRequest
+	(*SubmitFeedbackResponse)(nil), // 12: linuxrag.v1.SubmitFeedbackResponse
+	(*ControlStackRequest)(nil),    // 13: linuxrag.v1.ControlStackRequest
+	(*ControlStackResponse)(nil),   // 14: linuxrag.v1.ControlStackResponse
 }
 var file_rag_service_proto_depIdxs = []int32{
 	2,  // 0: linuxrag.v1.AskResponse.citations:type_name -> linuxrag.v1.Citation
 	5,  // 1: linuxrag.v1.RunIngestionResponse.errors:type_name -> linuxrag.v1.IngestionError
-	0,  // 2: linuxrag.v1.RagService.Ask:input_type -> linuxrag.v1.AskRequest
-	3,  // 3: linuxrag.v1.RagService.RunIngestion:input_type -> linuxrag.v1.RunIngestionRequest
-	6,  // 4: linuxrag.v1.RagService.GetStatus:input_type -> linuxrag.v1.GetStatusRequest
-	8,  // 5: linuxrag.v1.RagService.SubmitFeedback:input_type -> linuxrag.v1.SubmitFeedbackRequest
-	10, // 6: linuxrag.v1.RagService.ControlStack:input_type -> linuxrag.v1.ControlStackRequest
-	1,  // 7: linuxrag.v1.RagService.Ask:output_type -> linuxrag.v1.AskResponse
-	4,  // 8: linuxrag.v1.RagService.RunIngestion:output_type -> linuxrag.v1.RunIngestionResponse
-	7,  // 9: linuxrag.v1.RagService.GetStatus:output_type -> linuxrag.v1.GetStatusResponse
-	9,  // 10: linuxrag.v1.RagService.SubmitFeedback:output_type -> linuxrag.v1.SubmitFeedbackResponse
-	11, // 11: linuxrag.v1.RagService.ControlStack:output_type -> linuxrag.v1.ControlStackResponse
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	7,  // 2: linuxrag.v1.GetStatusResponse.progress:type_name -> linuxrag.v1.IngestionProgress
+	8,  // 3: linuxrag.v1.GetStatusResponse.schedule:type_name -> linuxrag.v1.ScheduleSummary
+	9,  // 4: linuxrag.v1.GetStatusResponse.eviction:type_name -> linuxrag.v1.EvictionTelemetry
+	0,  // 5: linuxrag.v1.RagService.Ask:input_type -> linuxrag.v1.AskRequest
+	3,  // 6: linuxrag.v1.RagService.RunIngestion:input_type -> linuxrag.v1.RunIngestionRequest
+	6,  // 7: linuxrag.v1.RagService.GetStatus:input_type -> linuxrag.v1.GetStatusRequest
+	11, // 8: linuxrag.v1.RagService.SubmitFeedback:input_type -> linuxrag.v1.SubmitFeedbackRequest
+	13, // 9: linuxrag.v1.RagService.ControlStack:input_type -> linuxrag.v1.ControlStackRequest
+	1,  // 10: linuxrag.v1.RagService.Ask:output_type -> linuxrag.v1.AskResponse
+	4,  // 11: linuxrag.v1.RagService.RunIngestion:output_type -> linuxrag.v1.RunIngestionResponse
+	10, // 12: linuxrag.v1.RagService.GetStatus:output_type -> linuxrag.v1.GetStatusResponse
+	12, // 13: linuxrag.v1.RagService.SubmitFeedback:output_type -> linuxrag.v1.SubmitFeedbackResponse
+	14, // 14: linuxrag.v1.RagService.ControlStack:output_type -> linuxrag.v1.ControlStackResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_rag_service_proto_init() }
@@ -887,7 +1169,7 @@ func file_rag_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rag_service_proto_rawDesc), len(file_rag_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

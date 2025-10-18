@@ -1,11 +1,20 @@
 Latest ingestion job: job-123 (completed)
-Cache usage: 42.5%
-Cache hit rate: 78%
-Active models: gemma3:1b, codegemma:2b
-
-Next scheduled run: 2025-01-01T12:00:00Z
-Last successful run: 2025-01-01T09:00:00Z
-
+Progress: 75.0% (stage: indexing)
+Retries: 1
 Man pages processed: 1234
 Wiki articles loaded: 567
+Errors: none
 
+Schedule summary:
+  Cadence: 24h
+  Next run: 2025-01-01T12:00:00Z
+  Last success: 2025-01-01T09:00:00Z
+
+Cache usage: 42.5% (hit rate: 78%)
+Eviction telemetry:
+  Total entries: 2048
+  Total size: 512.0 MiB / 1.0 GiB
+  Last eviction: n/a
+  Removed: 12 entries (11.8 MiB)
+
+Active models: gemma3:1b, codegemma:2b
