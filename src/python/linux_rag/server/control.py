@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import (
+    Any,
     Awaitable,
     Callable,
     Iterable,
@@ -17,6 +18,7 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
+    cast,
 )
 
 __all__ = [
@@ -97,7 +99,7 @@ class StackSettings:
     @classmethod
     def from_mapping(
         cls,
-        data: Mapping[str, object],
+        data: Mapping[str, Any],
         *,
         base_dir: Path | None = None,
     ) -> "StackSettings":
@@ -105,39 +107,39 @@ class StackSettings:
         paths_cfg = _as_mapping(data.get("paths"))
 
         compose_file = _coerce_path(
-            stack_cfg.get("compose_file", "infra/podman-compose.yml"),
+            cast(str | Path | None, stack_cfg.get("compose_file")),
             base_dir=base_dir,
+            fallback=Path("infra/podman-compose.yml"),
         )
 
         project_name = str(stack_cfg.get("project_name", "linux-rag"))
-        wait_timeout = float(stack_cfg.get("wait_timeout_seconds", 120))
+        wait_timeout = _coerce_float(
+            stack_cfg.get("wait_timeout_seconds"),
+            default=120.0,
+        )
 
         data_root = _coerce_path(
-            paths_cfg.get("data_root", "/var/lib/linux-rag"),
+            cast(str | Path | None, paths_cfg.get("data_root")),
             base_dir=base_dir,
+            fallback=Path("/var/lib/linux-rag"),
         )
 
-        ensure_dirs = [
-            data_root,
-        ]
+        ensure_dirs = [data_root]
 
-        ensure_dirs.extend(
-            _coerce_optional_path(
-                paths_cfg.get(key),
-                base_dir=base_dir,
-                fallback=data_root / default_suffix,
+        for key, default_suffix in (
+            ("cache_dir", "cache"),
+            ("weaviate_data_dir", "weaviate"),
+            ("ollama_models_dir", "ollama"),
+            ("kiwix_archives_dir", "kiwix"),
+            ("logs_dir", "logs"),
+        ):
+            ensure_dirs.append(
+                _coerce_optional_path(
+                    cast(str | Path | None, paths_cfg.get(key)),
+                    base_dir=base_dir,
+                    fallback=data_root / default_suffix,
+                )
             )
-            for key, default_suffix in (
-                ("cache_dir", "cache"),
-                ("weaviate_data_dir", "weaviate"),
-                ("ollama_models_dir", "ollama"),
-                ("kiwix_archives_dir", "kiwix"),
-                ("logs_dir", "logs"),
-            )
-        )
-
-        # Filter out potential None values from optional coercion.
-        ensure_dirs = [path for path in ensure_dirs if path is not None]
 
         env_cfg = {
             str(key): str(value)
@@ -187,9 +189,25 @@ def _coerce_optional_path(
     return _ensure_path(path)
 
 
-def _as_mapping(value: object | None) -> Mapping[str, object]:
+def _coerce_float(value: object | None, *, default: float) -> float:
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return default
+        try:
+            return float(stripped)
+        except ValueError as exc:  # pragma: no cover - configuration error
+            raise ValueError(f"cannot parse float from '{value}'") from exc
+    raise TypeError(f"Unsupported type for float coercion: {type(value)!r}")
+
+
+def _as_mapping(value: object | None) -> Mapping[str, Any]:
     if isinstance(value, Mapping):
-        return value
+        return cast(Mapping[str, Any], value)
     return {}
 
 
@@ -217,9 +235,12 @@ async def _default_runner(
     except FileNotFoundError as exc:  # pragma: no cover - environment dependent
         raise StackControlError(f"Executable not found: {args[0]}") from exc
     stdout_bytes, stderr_bytes = await process.communicate()
+    returncode = process.returncode
+    if returncode is None:
+        raise StackControlError(f"{args[0]} did not return an exit status.")
     return CommandResult(
         args=tuple(str(arg) for arg in args),
-        returncode=process.returncode,
+        returncode=returncode,
         stdout=stdout_bytes.decode(),
         stderr=stderr_bytes.decode(),
     )
@@ -429,4 +450,3 @@ class StackLifecycleController:
                 f"{args[0]} command failed (exit {result.returncode}): {result.stderr or result.stdout}"
             )
         return result
-
