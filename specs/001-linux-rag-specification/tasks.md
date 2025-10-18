@@ -84,7 +84,7 @@
 
 - [X] T037 [P] [US2] Implement Podman stack lifecycle control helpers in `src/python/linux_rag/server/control.py`
 - [X] T038 [P] [US2] Build man page ingestion pipeline emitting `KnowledgeSource` records in `src/python/linux_rag/ingestion/man_pages.py`
-- [ ] T039 [P] [US2] Implement Kiwix archive download and import workflow in `src/python/linux_rag/ingestion/kiwix.py`
+- [X] T039 [P] [US2] Implement Kiwix archive download and import workflow in `src/python/linux_rag/ingestion/kiwix.py`
 - [ ] T040 [US2] Persist ingestion jobs, last refresh metrics, and failure history in `src/python/linux_rag/ingestion/jobs.py`
 - [ ] T041 [US2] Extend gRPC handlers for `RunIngestion`/`GetStatus` with telemetry and schedule metadata in `src/python/linux_rag/server/handlers/admin.py`
 - [ ] T042 [US2] Implement `ragman-admin` commands (`run`, `ingest`, `status`) in `src/go/cmd/ragman-admin/main.go`
