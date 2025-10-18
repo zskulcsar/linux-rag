@@ -58,7 +58,7 @@
 - [X] T024 [P] [US1] Implement answer synthesis with Ollama models and citation assembly in `src/python/linux_rag/llm/response_builder.py`
 - [X] T025 [US1] Wire `Ask` gRPC handler and cache integration in `src/python/linux_rag/server/handlers/ask.py`
 - [X] T026 [US1] Implement `ragman` cobra command with flags (`--model`, `--format`, `--no-cache`) in `src/go/cmd/ragman/main.go`
-- [ ] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
+- [X] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
 - [ ] T028 [US1] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman/errors.go`
 - [ ] T029 [US1] Persist `AnswerSession` records with cache metadata in `src/python/linux_rag/retrieval/session_store.py`
 - [ ] T030 [US1] Update usage documentation for `ragman ask` scenarios in `docs/cli.md`

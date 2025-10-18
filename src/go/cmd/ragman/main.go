@@ -49,10 +49,12 @@ func Execute(args []string) error {
 }
 
 func newRootCmd() *cobra.Command {
-	root := cobra.NewCommand("ragman")
-	root.Short = "Linux RAG assistant CLI"
-	root.SilenceUsage = true
-	root.SilenceErrors = true
+	root := &cobra.Command{
+		Use:           "ragman",
+		Short:         "Linux RAG assistant CLI",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
 
 	root.AddCommand(newAskCmd())
 	return root
@@ -69,10 +71,12 @@ func newAskCmd() *cobra.Command {
 
 	var noCache bool
 
-	cmd := cobra.NewCommand("ask")
-	cmd.Short = "Ask a question using the knowledge assistant"
-	cmd.SilenceUsage = true
-	cmd.SilenceErrors = true
+	cmd := &cobra.Command{
+		Use:           "ask",
+		Short:         "Ask a question using the knowledge assistant",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
 
 	flags := cmd.Flags()
 	flags.StringVarP(&opts.model, "model", "m", opts.model, "Model to use")
