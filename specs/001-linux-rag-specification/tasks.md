@@ -73,7 +73,7 @@
 
 ### Tests for User Story 2 (write first and watch them fail)
 
-- [ ] T031 [P] [US2] Add gRPC contract test for `RunIngestion`, `GetStatus`, and scheduled refresh reporting in `tests/python/contracts/test_run_ingestion.py`
+- [X] T031 [P] [US2] Add gRPC contract test for `RunIngestion`, `GetStatus`, and scheduled refresh reporting in `tests/python/contracts/test_run_ingestion.py`
 - [ ] T032 [P] [US2] Add admin CLI integration test covering `run -> ingest -> status` with schedule assertions in `tests/python/integration/test_ragman_admin_ingest.py`
 - [ ] T033 [P] [US2] Add unit tests for ingestion job orchestration and error recovery in `tests/python/unit/test_ingestion_pipeline.py`
 - [ ] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
