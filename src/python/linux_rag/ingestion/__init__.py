@@ -7,6 +7,14 @@ from .kiwix import (
     KiwixIngestionError,
     KiwixIngestionResult,
 )
+from .jobs import (
+    IngestionErrorRecord,
+    IngestionJobRecord,
+    IngestionJobStatus,
+    IngestionJobStore,
+    IngestionJobType,
+    RefreshHistory,
+)
 from .man_pages import (
     ManPageIngestionError,
     ManPageIngestionResult,
@@ -20,14 +28,20 @@ from .scheduler import (
 )
 
 __all__ = [
-    "ManPageIngestionError",
-    "ManPageIngestionResult",
-    "ManPageIngestor",
     "ArchiveImportResult",
     "ArchiveMetadata",
     "KiwixArchiveIngestor",
     "KiwixIngestionError",
     "KiwixIngestionResult",
+    "IngestionErrorRecord",
+    "IngestionJobRecord",
+    "IngestionJobStatus",
+    "IngestionJobStore",
+    "IngestionJobType",
+    "ManPageIngestionError",
+    "ManPageIngestionResult",
+    "ManPageIngestor",
+    "RefreshHistory",
     "RefreshRequest",
     "RefreshScheduler",
     "SchedulerState",
