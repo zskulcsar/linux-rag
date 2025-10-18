@@ -72,12 +72,45 @@ This guide covers the local prerequisites and bootstrap flow for bringing up the
 
 7. **Ask questions**
 
+   `ragman ask` sends your query to the Python gRPC service and renders the answer with citations. Common flags:
+
+   - `--model, -m`: choose between `gemma3:1b` (default) and `codegemma:2b`
+   - `--format, -f`: switch between `text` and `json` output
+   - `--no-cache`: bypass the local SQLite cache for a fresh response
+   - `--hint`: pass additional retrieval keywords (repeatable)
+   - `--socket`: override the Unix socket path (defaults to `/run/linux-rag/rag-service.sock`)
+   - `--timeout`: adjust the RPC timeout (default `15s`)
+
    ```bash
    ./bin/ragman ask "How do I enable automount on boot?"
-   ./bin/ragman ask --model codegemma:2b --format json "Create a systemd unit to remount /data"
+   ./bin/ragman ask --model codegemma:2b --hint automount --hint systemd \
+     "Create a systemd unit to remount /data"
+   ./bin/ragman ask --format json --no-cache \
+     "Show me the command to list running services"
    ```
 
-   Use `--no-cache` to bypass the SQLite response cache when you need fresh answers.
+   Sample JSON output:
+
+   ```json
+   {
+     "query": "Show me the command to list running services",
+     "session_id": "1c5b6b86-a9a0-4d1c-9f0d-2d2e8dc4b9cd",
+     "answer": "Use `systemctl list-units --type=service` to list running services.",
+     "model": "gemma3:1b",
+     "response_time_ms": 142,
+     "cache_hit": false,
+     "citations": [
+       {
+         "id": "doc-1",
+         "title": "systemctl reference",
+         "snippet": "`systemctl list-units --type=service` lists active service units.",
+         "source_path": "/var/lib/linux-rag/man/systemctl.1"
+       }
+     ]
+   }
+   ```
+
+   Use the `--socket` flag when the service runs under a non-default path or through a forwarded TCP endpoint. For quick smoke tests without starting the stack, `ragman` also supports `--socket mock://demo`, which renders deterministic sample data directly in the CLI.
 
 ## Testing (optional during bootstrap)
 

@@ -61,7 +61,7 @@
 - [X] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
 - [X] T028 [US1] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman/errors.go`
 - [X] T029 [US1] Persist `AnswerSession` records with cache metadata in `src/python/linux_rag/retrieval/session_store.py`
-- [ ] T030 [US1] Update usage documentation for `ragman ask` scenarios in `docs/cli.md`
+- [X] T030 [US1] Update usage documentation for `ragman ask` scenarios in `docs/cli.md`
 
 ---
 
