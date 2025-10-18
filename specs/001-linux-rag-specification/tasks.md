@@ -78,7 +78,7 @@
 - [X] T033 [P] [US2] Add unit tests for ingestion job orchestration and error recovery in `tests/python/unit/test_ingestion_pipeline.py`
 - [X] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
 - [X] T035 [P] [US2] Add Go unit tests for `ragman-admin` flag validation and error handling in `src/go/cmd/ragman-admin/main_test.go`
-- [ ] T036 [P] [US2] Add Go golden output tests for status/ingest summaries in `src/go/cmd/ragman-admin/status_test.go`
+- [X] T036 [P] [US2] Add Go golden output tests for status/ingest summaries in `src/go/cmd/ragman-admin/status_test.go`
 
 ### Implementation for User Story 2
 

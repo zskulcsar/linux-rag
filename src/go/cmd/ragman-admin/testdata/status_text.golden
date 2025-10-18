@@ -1,0 +1,11 @@
+Latest ingestion job: job-123 (completed)
+Cache usage: 42.5%
+Cache hit rate: 78%
+Active models: gemma3:1b, codegemma:2b
+
+Next scheduled run: 2025-01-01T12:00:00Z
+Last successful run: 2025-01-01T09:00:00Z
+
+Man pages processed: 1234
+Wiki articles loaded: 567
+
