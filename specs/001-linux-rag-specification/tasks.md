@@ -76,7 +76,7 @@
 - [X] T031 [P] [US2] Add gRPC contract test for `RunIngestion`, `GetStatus`, and scheduled refresh reporting in `tests/python/contracts/test_run_ingestion.py`
 - [X] T032 [P] [US2] Add admin CLI integration test covering `run -> ingest -> status` with schedule assertions in `tests/python/integration/test_ragman_admin_ingest.py`
 - [X] T033 [P] [US2] Add unit tests for ingestion job orchestration and error recovery in `tests/python/unit/test_ingestion_pipeline.py`
-- [ ] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
+- [X] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
 - [ ] T035 [P] [US2] Add Go unit tests for `ragman-admin` flag validation and error handling in `src/go/cmd/ragman-admin/main_test.go`
 - [ ] T036 [P] [US2] Add Go golden output tests for status/ingest summaries in `src/go/cmd/ragman-admin/status_test.go`
 
