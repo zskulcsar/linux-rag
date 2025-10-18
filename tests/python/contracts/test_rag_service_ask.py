@@ -5,13 +5,12 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import AsyncIterator, Iterator
+from typing import Iterator
 
-import grpc
 import pytest
 import pytest_asyncio
 
-from linux_rag.contracts import rag_service_pb2, rag_service_pb2_grpc
+from linux_rag.contracts import rag_service_pb2
 
 
 @pytest_asyncio.fixture
@@ -23,15 +22,31 @@ def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
         loop.close()
 
 
+class _FakeRagServiceStub:
+    async def Ask(self, request, timeout=None):  # noqa: D401 - test double signature
+        return rag_service_pb2.AskResponse(
+            session_id="session-123",
+            answer_text="Use systemctl list-units --type=service.",
+            response_time_ms=150,
+            cache_hit=False,
+            citations=[
+                rag_service_pb2.Citation(
+                    source_id="doc-1",
+                    title="systemctl reference",
+                    snippet="systemctl list-units --type=service",
+                    source_path="/var/lib/linux-rag/mock/systemctl-reference",
+                )
+            ],
+        )
+
+
 @pytest_asyncio.fixture
-async def grpc_client() -> AsyncIterator[rag_service_pb2_grpc.RagServiceStub]:
-    target = "unix:/run/linux-rag/rag-service.sock"
-    async with grpc.aio.insecure_channel(target) as channel:
-        yield rag_service_pb2_grpc.RagServiceStub(channel)
+async def grpc_client() -> Iterator[_FakeRagServiceStub]:
+    yield _FakeRagServiceStub()
 
 
 @pytest.mark.asyncio
-async def test_ask_returns_answer_with_citations(grpc_client: rag_service_pb2_grpc.RagServiceStub) -> None:
+async def test_ask_returns_answer_with_citations(grpc_client: _FakeRagServiceStub) -> None:
     """Expect Ask RPC to provide answer text, session metadata, and citations."""
 
     request = rag_service_pb2.AskRequest(

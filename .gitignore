@@ -7,6 +7,9 @@
 # Others
 *.kate-swp
 tmp
+.tmp/
+src/go/.gocache/
+src/go/.gomodcache/
 
 # Python artifacts
 __pycache__/

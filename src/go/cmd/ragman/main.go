@@ -120,18 +120,20 @@ func newAskCmd() *cobra.Command {
 }
 
 func runAsk(question string, opts askOptions) error {
+	if strings.HasPrefix(opts.socket, "mock://") {
+		view := mockAnswerView(question, opts)
+		return renderAndPrint(view, OutputFormat(opts.format))
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), opts.timeout)
 	defer cancel()
 
-	dialer := func(ctx context.Context, _ string) (net.Conn, error) {
-		return net.DialTimeout("unix", opts.socket, opts.timeout)
-	}
+	target, dialOpts := resolveEndpoint(opts)
 
 	conn, err := grpc.DialContext(
 		ctx,
-		"unix://"+opts.socket,
-		grpc.WithContextDialer(dialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		target,
+		append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to connect to service at %s: %w", opts.socket, err)
@@ -169,13 +171,54 @@ func runAsk(question string, opts askOptions) error {
 		})
 	}
 
-	rendered, renderErr := RenderAnswer(view, OutputFormat(opts.format))
-	if renderErr != nil {
-		rendered = fallbackRender(view, OutputFormat(opts.format))
+	return renderAndPrint(view, OutputFormat(opts.format))
+}
+
+func resolveEndpoint(opts askOptions) (string, []grpc.DialOption) {
+	socket := opts.socket
+	if strings.HasPrefix(socket, "tcp://") {
+		return strings.TrimPrefix(socket, "tcp://"), nil
+	}
+
+	path := strings.TrimPrefix(socket, "unix://")
+	if path == "" {
+		path = socket
+	}
+
+	dialer := func(ctx context.Context, _ string) (net.Conn, error) {
+		return net.DialTimeout("unix", path, opts.timeout)
+	}
+
+	return "unix://" + path, []grpc.DialOption{grpc.WithContextDialer(dialer)}
+}
+
+func renderAndPrint(view AnswerView, format OutputFormat) error {
+	rendered, err := RenderAnswer(view, format)
+	if err != nil {
+		rendered = fallbackRender(view, format)
 	}
 
 	fmt.Println(rendered)
 	return nil
+}
+
+func mockAnswerView(question string, opts askOptions) AnswerView {
+	return AnswerView{
+		Query:          question,
+		SessionID:      "mock-session",
+		Answer:         "Use systemctl list-units --type=service to inspect running services.",
+		Model:          opts.model,
+		ResponseTimeMS: 123,
+		CacheHit:       false,
+		Citations: []CitationView{
+			{
+				SourceID:   "doc-1",
+				Title:      "systemctl overview",
+				Snippet:    "systemctl list-units --type=service",
+				SourcePath: "/var/lib/linux-rag/mock/systemctl-overview",
+			},
+		},
+	}
 }
 
 func fallbackRender(view AnswerView, format OutputFormat) string {

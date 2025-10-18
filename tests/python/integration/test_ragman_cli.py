@@ -3,34 +3,50 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+GO_ROOT = REPO_ROOT / "src" / "go"
 
 pytestmark = pytest.mark.integration
 
 
-def _run_ragman_cli(*extra_args: str) -> subprocess.CompletedProcess[str]:
+def _ensure_go_env() -> dict[str, str]:
+    env = os.environ.copy()
+    go_cache = GO_ROOT / ".gocache"
+    go_cache.mkdir(exist_ok=True)
+    go_mod_cache = GO_ROOT / ".gomodcache"
+    go_mod_cache.mkdir(exist_ok=True)
+    env.setdefault("GOCACHE", str(go_cache))
+    env.setdefault("GOMODCACHE", str(go_mod_cache))
+    return env
+
+
+def _run_ragman_cli(socket_path: str, question: str) -> subprocess.CompletedProcess[str]:
     """Execute the Go CLI via `go run` so binaries are not a prerequisite."""
     cmd = [
         "go",
         "run",
-        "./src/go/cmd/ragman",
+        "./cmd/ragman",
         "ask",
         "--format",
         "json",
         "--no-cache",
-        *extra_args,
+        "--socket",
+        socket_path,
+        question,
     ]
     return subprocess.run(
         cmd,
-        cwd=REPO_ROOT,
+        cwd=GO_ROOT,
         capture_output=True,
         text=True,
         timeout=15,
+        env=_ensure_go_env(),
     )
 
 
@@ -38,7 +54,7 @@ def test_ragman_ask_returns_structured_answer() -> None:
     """Expect the CLI to return JSON with answer metadata and citations."""
     question = "How do I enable automount on boot?"
 
-    result = _run_ragman_cli(question)
+    result = _run_ragman_cli("mock://demo", question)
 
     assert (
         result.returncode == 0

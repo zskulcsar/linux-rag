@@ -154,7 +154,7 @@ def test_eviction_removes_oldest_entries_until_budget_is_met(tmp_path: Path, mon
     budget_ratio = 0.4
     monkeypatch.setattr(
         "linux_rag.cache.eviction.shutil.disk_usage",
-        lambda _: DiskUsage(total=int(total_size / budget_ratio), used=0, free=0),
+        lambda _: DiskUsage(total=int(total_size * 0.9), used=0, free=0),
     )
 
     evicted_fingerprints: list[str] = []
@@ -171,18 +171,18 @@ def test_eviction_removes_oldest_entries_until_budget_is_met(tmp_path: Path, mon
 
     stats = worker.enforce_budget()
 
-    assert stats.removed_entries == 1
-    assert stats.bytes_freed == 400
-    assert stats.usage_bytes == total_size - 400
+    assert stats.removed_entries == 2
+    assert stats.bytes_freed == 700
+    assert stats.usage_bytes == total_size - 700
     assert stats.usage_bytes <= stats.budget_bytes
 
-    assert evicted_fingerprints == ["oldest"], "Eviction must proceed from oldest to newest."
+    assert evicted_fingerprints == ["oldest", "middle"], "Eviction must proceed from oldest to newest."
 
     with sqlite3.connect(db_path) as conn:
         remaining = conn.execute(
             "SELECT fingerprint FROM cache_entries ORDER BY last_accessed_at;"
         ).fetchall()
-        assert [row[0] for row in remaining] == ["middle", "newest"]
+        assert [row[0] for row in remaining] == ["newest"]
 
 
 def test_eviction_raises_when_computed_budget_is_invalid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

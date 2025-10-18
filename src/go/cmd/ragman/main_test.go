@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func requireExecuteError(t *testing.T, args []string) string {
@@ -71,5 +72,55 @@ func TestExecuteUnknownFlagProvidesGuidance(t *testing.T) {
 	}
 	if !strings.Contains(message, "Run 'ragman ask --help'") {
 		t.Errorf("expected help guidance for unknown flag, got: %s", message)
+	}
+}
+
+func TestResolveEndpointSupportsUnixPaths(t *testing.T) {
+	opts := askOptions{
+		socket:  "/tmp/rag-service.sock",
+		timeout: time.Second,
+	}
+
+	target, dialOpts := resolveEndpoint(opts)
+
+	if target != "unix:///tmp/rag-service.sock" {
+		t.Fatalf("expected unix target, got %s", target)
+	}
+	if len(dialOpts) != 1 {
+		t.Fatalf("expected context dialer to be configured for unix sockets")
+	}
+}
+
+func TestResolveEndpointSupportsTCP(t *testing.T) {
+	opts := askOptions{
+		socket:  "tcp://127.0.0.1:50051",
+		timeout: time.Second,
+	}
+
+	target, dialOpts := resolveEndpoint(opts)
+
+	if target != "127.0.0.1:50051" {
+		t.Fatalf("expected tcp target without scheme, got %s", target)
+	}
+	if len(dialOpts) != 0 {
+		t.Fatalf("expected no custom dial options for tcp endpoints")
+	}
+}
+
+func TestMockAnswerViewIncludesCitation(t *testing.T) {
+	opts := askOptions{
+		model: "gemma3:1b",
+	}
+
+	view := mockAnswerView("Check services", opts)
+
+	if view.SessionID == "" {
+		t.Fatalf("expected mock session id to be set")
+	}
+	if len(view.Citations) != 1 {
+		t.Fatalf("expected single citation, got %d", len(view.Citations))
+	}
+	if !strings.HasPrefix(view.Citations[0].SourcePath, "/") {
+		t.Fatalf("expected citation path to be absolute, got %s", view.Citations[0].SourcePath)
 	}
 }
