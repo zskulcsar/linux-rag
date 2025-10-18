@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, MutableMapping, Tuple
+from typing import Any, MutableMapping, Tuple, NoReturn
 
 import grpc  # type: ignore[import-untyped]
 
@@ -53,7 +53,7 @@ class AskHandler:
 
         query = request.query_text.strip()
         if not query:
-            return self._abort(
+            await self._abort(
                 context,
                 grpc.StatusCode.INVALID_ARGUMENT,
                 "query_text must not be empty.",
@@ -148,8 +148,7 @@ class AskHandler:
             )
         except Exception as exc:  # pragma: no cover - will be surfaced upstream
             message = f"retrieval failed: {exc}"
-            self._abort(context, grpc.StatusCode.INTERNAL, message)
-            raise  # pragma: no cover - abort raises
+            await self._abort(context, grpc.StatusCode.INTERNAL, message)
 
     async def _synthesize_answer(
         self,
@@ -168,15 +167,14 @@ class AskHandler:
             )
         except ResponseBuilderError as exc:
             message = f"failed to synthesize answer: {exc}"
-            self._abort(context, grpc.StatusCode.INTERNAL, message)
-            raise  # pragma: no cover
+            await self._abort(context, grpc.StatusCode.INTERNAL, message)
 
-    def _abort(
+    async def _abort(
         self,
         context: grpc.aio.ServicerContext | None,
         status: grpc.StatusCode,
         message: str,
-    ):
+    ) -> NoReturn:
         if context is not None:
-            context.abort(status, message)
+            await context.abort(status, message)
         raise grpc.RpcError(message)  # pragma: no cover - fallback if context missing

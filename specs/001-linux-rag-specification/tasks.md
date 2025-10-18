@@ -86,7 +86,7 @@
 - [X] T038 [P] [US2] Build man page ingestion pipeline emitting `KnowledgeSource` records in `src/python/linux_rag/ingestion/man_pages.py`
 - [X] T039 [P] [US2] Implement Kiwix archive download and import workflow in `src/python/linux_rag/ingestion/kiwix.py`
 - [X] T040 [US2] Persist ingestion jobs, last refresh metrics, and failure history in `src/python/linux_rag/ingestion/jobs.py`
-- [ ] T041 [US2] Extend gRPC handlers for `RunIngestion`/`GetStatus` with telemetry and schedule metadata in `src/python/linux_rag/server/handlers/admin.py`
+- [X] T041 [US2] Extend gRPC handlers for `RunIngestion`/`GetStatus` with telemetry and schedule metadata in `src/python/linux_rag/server/handlers/admin.py`
 - [ ] T042 [US2] Implement `ragman-admin` commands (`run`, `ingest`, `status`) in `src/go/cmd/ragman-admin/main.go`
 - [ ] T043 [US2] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman-admin/errors.go`
 - [ ] T044 [US2] Add progress, retries, schedule summary, and eviction telemetry output in `src/go/cmd/ragman-admin/status.go`

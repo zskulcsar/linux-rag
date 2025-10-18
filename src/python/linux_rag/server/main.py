@@ -11,7 +11,7 @@ import argparse
 import asyncio
 import logging
 import signal
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -19,6 +19,9 @@ import grpc  # type: ignore[import-untyped]
 from grpc.aio import Server  # type: ignore[import-untyped]
 
 from linux_rag.contracts import rag_service_pb2_grpc
+from linux_rag.ingestion import IngestionJobStore
+from linux_rag.ingestion.schedule_store import ScheduleStore
+from linux_rag.server.handlers import AdminHandler
 
 try:
     import yaml  # type: ignore[import-untyped]
@@ -36,21 +39,66 @@ class ServerConfig:
 
     socket_path: Path = DEFAULT_SOCKET_PATH
     log_level: str = DEFAULT_LOG_LEVEL
+    data_root: Path = Path("/var/lib/linux-rag")
+    cache_dir: Path = Path("/var/lib/linux-rag/cache")
+    manpage_root: Path = Path("/usr/share/man")
+    wiki_archives_dir: Path = Path("/var/lib/linux-rag/kiwix")
+    wiki_extract_dir: Path = Path("/var/lib/linux-rag/kiwix/extracted")
+    ingestion_jobs_db: Path = Path("/var/lib/linux-rag/state/ingestion_jobs.db")
+    schedule_db_path: Path = Path("/var/lib/linux-rag/state/refresh_schedule.db")
+    default_wiki_archives: tuple[str, ...] = ()
+    active_models: tuple[str, ...] = ()
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "ServerConfig":
         runtime = data.get("runtime", {}) if isinstance(data, dict) else {}
-        socket_path = Path(runtime.get("socket_path", DEFAULT_SOCKET_PATH))
+        socket_path = Path(runtime.get("socket_path", DEFAULT_SOCKET_PATH)).expanduser().resolve()
         log_level = str(runtime.get("log_level", DEFAULT_LOG_LEVEL)).lower()
-        return cls(socket_path=socket_path, log_level=log_level)
+        paths_cfg = data.get("paths", {}) if isinstance(data, dict) else {}
+        data_root = Path(paths_cfg.get("data_root", "/var/lib/linux-rag")).expanduser().resolve()
+        cache_dir = Path(paths_cfg.get("cache_dir", data_root / "cache")).expanduser().resolve()
+        wiki_archives_dir = Path(paths_cfg.get("kiwix_archives_dir", data_root / "kiwix")).expanduser().resolve()
+        ingestion_cfg = data.get("ingestion", {}) if isinstance(data, dict) else {}
+        manpage_root = Path(ingestion_cfg.get("manpage_root", "/usr/share/man")).expanduser().resolve()
+        wiki_extract_dir = Path(
+            ingestion_cfg.get("wiki_extract_dir", wiki_archives_dir / "extracted")
+        ).expanduser().resolve()
+        default_wiki_archives = tuple(
+            str(item)
+            for item in ingestion_cfg.get("default_wiki_archives", ())
+        )
+        state_dir = (data_root / "state").expanduser().resolve()
+        ingestion_jobs_db = (state_dir / "ingestion_jobs.db").resolve()
+        schedule_db_path = (state_dir / "refresh_schedule.db").resolve()
+        services_cfg = data.get("services", {}) if isinstance(data, dict) else {}
+        ollama_cfg = services_cfg.get("ollama", {})
+        active_models: list[str] = []
+        for key in ("default_model", "embedding_model"):
+            value = ollama_cfg.get(key)
+            if value:
+                active_models.append(str(value))
+        return cls(
+            socket_path=socket_path,
+            log_level=log_level,
+            data_root=data_root,
+            cache_dir=cache_dir,
+            manpage_root=manpage_root,
+            wiki_archives_dir=wiki_archives_dir,
+            wiki_extract_dir=wiki_extract_dir,
+            ingestion_jobs_db=ingestion_jobs_db,
+            schedule_db_path=schedule_db_path,
+            default_wiki_archives=tuple(default_wiki_archives),
+            active_models=tuple(active_models),
+        )
 
 
 class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
-    """Placeholder service; concrete handlers will be composed in future tasks."""
+    """Dispatches gRPC calls to configured handler implementations."""
 
-    def __init__(self, *, ask_handler=None) -> None:
+    def __init__(self, *, ask_handler=None, admin_handler=None) -> None:
         super().__init__()
         self._ask_handler = ask_handler
+        self._admin_handler = admin_handler
 
     async def Ask(self, request, context):  # type: ignore[override]
         if self._ask_handler is None:
@@ -58,10 +106,14 @@ class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
         return await self._ask_handler.handle(request, context)  # type: ignore[no-any-return]
 
     async def RunIngestion(self, request, context):  # type: ignore[override]
-        raise NotImplementedError("RunIngestion handler not implemented yet.")
+        if self._admin_handler is None:
+            context.abort(grpc.StatusCode.UNIMPLEMENTED, "RunIngestion handler not configured.")
+        return await self._admin_handler.run_ingestion(request, context)  # type: ignore[no-any-return]
 
     async def GetStatus(self, request, context):  # type: ignore[override]
-        raise NotImplementedError("GetStatus handler not implemented yet.")
+        if self._admin_handler is None:
+            context.abort(grpc.StatusCode.UNIMPLEMENTED, "GetStatus handler not configured.")
+        return await self._admin_handler.get_status(request, context)  # type: ignore[no-any-return]
 
     async def SubmitFeedback(self, request, context):  # type: ignore[override]
         raise NotImplementedError("SubmitFeedback handler not implemented yet.")
@@ -117,11 +169,45 @@ def _prepare_socket(path: Path) -> None:
         path.unlink()
 
 
+def _compute_cache_stats(cache_dir: Path) -> tuple[float, int]:
+    total_bytes = 0
+    if cache_dir.exists():
+        for entry in cache_dir.rglob("*"):
+            if entry.is_file():
+                try:
+                    total_bytes += entry.stat().st_size
+                except OSError:  # pragma: no cover - best effort accounting
+                    continue
+    if total_bytes == 0:
+        return (0.0, 0)
+    disk_pct = min((total_bytes / 1_073_741_824) * 100.0, 100.0)
+    return (disk_pct, 0)
+
+
+def _build_admin_handler(config: ServerConfig) -> AdminHandler:
+    job_store = IngestionJobStore(config.ingestion_jobs_db)
+    schedule_store = ScheduleStore(config.schedule_db_path)
+
+    def cache_snapshot() -> tuple[float, int]:
+        return _compute_cache_stats(config.cache_dir)
+
+    return AdminHandler(
+        job_store=job_store,
+        schedule_store=schedule_store,
+        manpage_root=str(config.manpage_root),
+        default_wiki_archives=config.default_wiki_archives,
+        active_models=config.active_models,
+        cache_stats_provider=cache_snapshot,
+    )
+
+
 def _create_server(config: ServerConfig) -> Server:
     server = grpc.aio.server()
-    rag_service_pb2_grpc.add_RagServiceServicer_to_server(
-        RagServiceDispatcher(), server
+    dispatcher = RagServiceDispatcher(
+        ask_handler=None,
+        admin_handler=_build_admin_handler(config),
     )
+    rag_service_pb2_grpc.add_RagServiceServicer_to_server(dispatcher, server)
     bind_target = f"unix:{config.socket_path}"
     server.add_insecure_port(bind_target)
     return server
@@ -161,7 +247,7 @@ def serve(argv: Iterable[str] | None = None) -> None:
     args = _parse_args(argv)
     config = _load_config(args.config)
     if args.socket is not None:
-        config = ServerConfig(socket_path=args.socket, log_level=config.log_level)
+        config = replace(config, socket_path=args.socket)
     asyncio.run(_serve(config))
 
 
