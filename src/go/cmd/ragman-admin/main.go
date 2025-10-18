@@ -423,29 +423,10 @@ func parseConfigFile(path string, cfg *adminConfig) error {
 	return scanner.Err()
 }
 
-const helpTemplate = "Run '%s --help' for usage details."
-
-func errorWithGuidance(cmd *cobra.Command, message string) error {
-	hint := fmt.Sprintf(helpTemplate, cmd.CommandPath())
-	return fmt.Errorf("%s\n\n%s", message, hint)
-}
-
-func newFlagValueError(cmd *cobra.Command, flagName, value string, allowed []string) error {
-	formatted := fmt.Sprintf("--%s %q is not supported; allowed values: %s", flagName, value, strings.Join(allowed, ", "))
-	return errorWithGuidance(cmd, formatted)
-}
-
-func newFlagParseError(cmd *cobra.Command, err error) error {
-	if err == nil {
-		return nil
-	}
-	return errorWithGuidance(cmd, strings.TrimSpace(err.Error()))
-}
-
 func (o *rootOptions) requireConfig(cmd *cobra.Command) (string, error) {
 	path := strings.TrimSpace(o.configPath)
 	if path == "" {
-		return "", errorWithGuidance(cmd, "configuration file is required; provide --config <path>")
+		return "", newMissingConfigError(cmd)
 	}
 	resolved, err := findConfigPath(path)
 	if err != nil {
@@ -683,7 +664,7 @@ func newIngestCmd(rootOpts *rootOptions) *cobra.Command {
 			opts.refreshManual = strings.TrimSpace(opts.manRoot) != ""
 
 			if !opts.refreshManual && len(opts.wikiArchives) == 0 {
-				return errorWithGuidance(cmd, "ingest requires --man-root or at least one --wiki archive")
+				return newMissingSourceError(cmd)
 			}
 
 			configPath, err := rootOpts.requireConfig(cmd)
