@@ -78,6 +78,10 @@ func newAskCmd() *cobra.Command {
 		SilenceErrors: true,
 	}
 
+	cmd.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
+		return newFlagParseError(c, err)
+	})
+
 	flags := cmd.Flags()
 	flags.StringVarP(&opts.model, "model", "m", opts.model, "Model to use")
 	flags.StringVarP(&opts.format, "format", "f", opts.format, "Output format (text or json)")
@@ -93,19 +97,19 @@ func newAskCmd() *cobra.Command {
 		opts.socket = strings.TrimSpace(opts.socket)
 
 		if strings.TrimSpace(opts.socket) == "" {
-			return fmt.Errorf("socket path must not be empty")
+			return errorWithGuidance(cmd, "socket path must not be empty")
 		}
 
 		if !contains(allowedFormats, opts.format) {
-			return fmt.Errorf("--format %q is not supported; allowed formats: %s", opts.format, strings.Join(allowedFormats, ", "))
+			return newFlagValueError(cmd, "format", opts.format, allowedFormats)
 		}
 		if !contains(allowedModels, opts.model) {
-			return fmt.Errorf("--model %q is not supported; available models: %s", opts.model, strings.Join(allowedModels, ", "))
+			return newFlagValueError(cmd, "model", opts.model, allowedModels)
 		}
 
 		question := strings.TrimSpace(strings.Join(args, " "))
 		if question == "" {
-			return fmt.Errorf("question text is required; run ragman ask \"How do I enable automount on boot?\"")
+			return newRequiredArgumentError(cmd, "question text is required; run ragman ask \"How do I enable automount on boot?\"")
 		}
 
 		opts.hints = filterEmpty(opts.hints)

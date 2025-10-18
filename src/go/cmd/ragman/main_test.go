@@ -24,6 +24,9 @@ func TestExecuteRequiresQuestionArgument(t *testing.T) {
 	if !strings.Contains(message, `ragman ask "How do I enable automount on boot?"`) {
 		t.Errorf("expected example usage in error message, got: %s", message)
 	}
+	if !strings.Contains(message, "Run 'ragman ask --help'") {
+		t.Errorf("expected help guidance in error message, got: %s", message)
+	}
 }
 
 func TestExecuteRejectsUnsupportedFormat(t *testing.T) {
@@ -38,6 +41,9 @@ func TestExecuteRejectsUnsupportedFormat(t *testing.T) {
 			break
 		}
 	}
+	if !strings.Contains(message, "Run 'ragman ask --help'") {
+		t.Errorf("expected help guidance in format error, got: %s", message)
+	}
 }
 
 func TestExecuteRejectsUnknownModel(t *testing.T) {
@@ -46,10 +52,24 @@ func TestExecuteRejectsUnknownModel(t *testing.T) {
 	if !strings.Contains(message, "--model") {
 		t.Errorf("expected error to reference --model flag, got: %s", message)
 	}
-	if !strings.Contains(strings.ToLower(message), "available models") {
-		t.Errorf("expected error to mention available models, got: %s", message)
+	if !strings.Contains(strings.ToLower(message), "allowed values") {
+		t.Errorf("expected error to mention allowed values, got: %s", message)
 	}
 	if strings.Contains(message, "gpt-4") && !strings.Contains(message, "gemma3:1b") {
 		t.Errorf("expected guidance to suggest supported models, got: %s", message)
+	}
+	if !strings.Contains(message, "Run 'ragman ask --help'") {
+		t.Errorf("expected help guidance in model error, got: %s", message)
+	}
+}
+
+func TestExecuteUnknownFlagProvidesGuidance(t *testing.T) {
+	message := requireExecuteError(t, []string{"ask", "--unknown"})
+
+	if !strings.Contains(strings.ToLower(message), "unknown flag") {
+		t.Errorf("expected unknown flag message, got: %s", message)
+	}
+	if !strings.Contains(message, "Run 'ragman ask --help'") {
+		t.Errorf("expected help guidance for unknown flag, got: %s", message)
 	}
 }
