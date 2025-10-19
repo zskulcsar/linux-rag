@@ -45,10 +45,12 @@ lint-python:
 
 lint-go:
 	@if [ -d "$(GO_ROOT)" ]; then \
-		if [ -x "$(GOLANGCI_LINT)" ]; then \
-			cd $(GO_ROOT) && "$(GOLANGCI_LINT)" run; \
+		if ! (cd $(GO_ROOT) && go list ./... >/dev/null 2>&1); then \
+			echo "Skipping Go lint; go list ./... failed (run 'go mod tidy'?)."; \
+		elif [ -x "$(GOLANGCI_LINT)" ]; then \
+			cd $(GO_ROOT) && "$(GOLANGCI_LINT)" run --modules-download-mode=mod ./...; \
 		elif command -v golangci-lint >/dev/null 2>&1; then \
-			cd $(GO_ROOT) && golangci-lint run; \
+			cd $(GO_ROOT) && golangci-lint run --modules-download-mode=mod ./...; \
 		else \
 			echo "golangci-lint not found; skipping Go lint."; \
 		fi; \

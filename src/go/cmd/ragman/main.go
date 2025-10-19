@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,6 +13,7 @@ import (
 	contractspb "github.com/linux-rag/linux-rag/internal/contracts"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -128,15 +130,9 @@ func runAsk(question string, opts askOptions) error {
 	ctx, cancel := context.WithTimeout(context.Background(), opts.timeout)
 	defer cancel()
 
-	target, dialOpts := resolveEndpoint(opts)
-
-	conn, err := grpc.DialContext(
-		ctx,
-		target,
-		append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))...,
-	)
+	conn, err := dialRPC(ctx, opts)
 	if err != nil {
-		return fmt.Errorf("failed to connect to service at %s: %w", opts.socket, err)
+		return err
 	}
 	defer conn.Close()
 
@@ -174,8 +170,38 @@ func runAsk(question string, opts askOptions) error {
 	return renderAndPrint(view, OutputFormat(opts.format))
 }
 
+func dialRPC(ctx context.Context, opts askOptions) (*grpc.ClientConn, error) {
+	target, dialOpts := resolveEndpoint(opts)
+	dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	conn, err := grpc.NewClient(target, dialOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to service at %s: %w", opts.socket, err)
+	}
+
+	conn.Connect()
+	deadline := time.Now().Add(opts.timeout)
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return conn, nil
+		}
+		if time.Now().After(deadline) {
+			conn.Close()
+			return nil, fmt.Errorf("failed to connect to service at %s: %w", opts.socket, context.DeadlineExceeded)
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			conn.Close()
+			if err := ctx.Err(); err != nil {
+				return nil, fmt.Errorf("failed to connect to service at %s: %w", opts.socket, err)
+			}
+			return nil, errors.New("gRPC connection did not become ready")
+		}
+	}
+}
+
 func resolveEndpoint(opts askOptions) (string, []grpc.DialOption) {
-	socket := opts.socket
+	socket := strings.TrimSpace(opts.socket)
 	if strings.HasPrefix(socket, "tcp://") {
 		return strings.TrimPrefix(socket, "tcp://"), nil
 	}

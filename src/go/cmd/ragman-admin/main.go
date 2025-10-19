@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -15,6 +16,7 @@ import (
 	contractspb "github.com/linux-rag/linux-rag/internal/contracts"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -763,11 +765,25 @@ func dialEndpoint(ctx context.Context, socket string, timeout time.Duration) (*g
 	dialCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(dialCtx, target, opts...)
+	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return conn, nil
+
+	conn.Connect()
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return conn, nil
+		}
+		if !conn.WaitForStateChange(dialCtx, state) {
+			conn.Close()
+			if err := dialCtx.Err(); err != nil {
+				return nil, err
+			}
+			return nil, errors.New("gRPC connection did not become ready")
+		}
+	}
 }
 
 func filterEmpty(input []string) []string {
