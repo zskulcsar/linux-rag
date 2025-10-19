@@ -30,6 +30,7 @@ dev = [
     "grpcio-testing>=1.75.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
+    "pip-audit>=2.9.0",
 ]
 
 [tool.pytest.ini_options]
