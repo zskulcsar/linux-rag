@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package linuxrag.v1;
 
+option go_package = "github.com/linux-rag/linux-rag/internal/contracts;contractspb";
+
 // RAG retrieval and admin service consumed by the Go CLIs.
 service RagService {
   // Submit a natural-language query and receive an answer with citations.
@@ -61,6 +63,27 @@ message IngestionError {
 
 message GetStatusRequest {}
 
+message IngestionProgress {
+  string stage = 1;              // running, completed, failed, idle
+  double percent_complete = 2;   // 0-100
+  int64 retry_count = 3;         // number of retries attempted during the latest job
+}
+
+message ScheduleSummary {
+  string cadence = 1;            // human readable cadence (e.g., "24h")
+  string next_run_at = 2;        // ISO timestamp
+  string last_success_at = 3;    // ISO timestamp
+}
+
+message EvictionTelemetry {
+  int64 total_entries = 1;
+  int64 total_bytes = 2;
+  int64 budget_bytes = 3;
+  string last_eviction_at = 4;   // ISO timestamp
+  int64 last_eviction_removed = 5;
+  int64 last_eviction_bytes = 6;
+}
+
 message GetStatusResponse {
   string latest_job_id = 1;
   string latest_job_status = 2;   // running, completed, failed
@@ -68,6 +91,12 @@ message GetStatusResponse {
   double cache_disk_pct = 4;      // 0-100
   int64 cache_hit_rate = 5;       // Percent
   repeated string active_models = 6;
+  IngestionProgress progress = 7;
+  ScheduleSummary schedule = 8;
+  EvictionTelemetry eviction = 9;
+  int64 man_pages_processed = 10;
+  int64 wiki_articles_loaded = 11;
+  repeated string ingestion_errors = 12;
 }
 
 message SubmitFeedbackRequest {

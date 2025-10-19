@@ -11,11 +11,11 @@
 
 **Purpose**: Establish language toolchains, configuration scaffolding, and documentation so engineering work can begin.
 
-- [ ] T001 Configure Python 3.11 project dependencies with uv in `pyproject.toml` (include dev extras for `ruff`, `black`, `mypy`)
-- [ ] T002 Initialize Go 1.22 module and cobra dependencies in `src/go/go.mod`
-- [ ] T003 [P] Wire lint, format, type-check, and test targets (`ruff`, `black`, `mypy`, `go test`, `pytest`) in `Makefile`
-- [ ] T004 Author base runtime configuration with volume defaults in `configs/local.yaml`
-- [ ] T005 [P] Document setup prerequisites and bootstrap flow in `docs/cli.md`
+- [X] T001 Configure Python 3.11 project dependencies with uv in `pyproject.toml` (include dev extras for `ruff`, `black`, `mypy`)
+- [X] T002 Initialize Go 1.22 module and cobra dependencies in `src/go/go.mod`
+- [X] T003 [P] Wire lint, format, type-check, and test targets (`ruff`, `black`, `mypy`, `go test`, `pytest`) in `Makefile`
+- [X] T004 Author base runtime configuration with volume defaults in `configs/local.yaml`
+- [X] T005 [P] Document setup prerequisites and bootstrap flow in `docs/cli.md`
 
 ---
 
@@ -23,17 +23,17 @@
 
 **Purpose**: Provide shared infrastructure, contracts, cache management, and core data scaffolding that all user stories rely on.
 
-- [ ] T006 Finalize Podman compose stack for Weaviate, Ollama, and shared volumes in `infra/podman-compose.yml`
-- [ ] T007 [P] Provide optional systemd unit to launch the stack in `infra/systemd/linux-rag.service`
-- [ ] T008 [P] Generate Python gRPC stubs from `contracts/rag_service.proto` into `src/python/linux_rag/contracts/rag_service_pb2.py`
-- [ ] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
-- [ ] T010 Create Python gRPC application skeleton with server bootstrap in `src/python/linux_rag/server/main.py`
-- [ ] T011 [P] Define shared entities (`KnowledgeSource`, `CacheEntry`) in `src/python/linux_rag/data/models.py`
-- [ ] T012 Establish SQLite schema and migrations for cache/session tables in `src/python/linux_rag/cache/schema.sql`
-- [ ] T013 [P] Implement refresh scheduler service orchestrating on-demand and scheduled ingestion in `src/python/linux_rag/ingestion/scheduler.py`
-- [ ] T014 Persist refresh cadence configuration and next-run metadata for status reporting in `src/python/linux_rag/ingestion/schedule_store.py`
-- [ ] T015 [P] Implement cache eviction worker enforcing disk budget in `src/python/linux_rag/cache/eviction.py`
-- [ ] T016 Instrument eviction telemetry (counters, gauges) exposed to status reporting in `src/python/linux_rag/cache/telemetry.py`
+- [X] T006 Finalize Podman compose stack for Weaviate, Ollama, and shared volumes in `infra/podman-compose.yml`
+- [X] T007 [P] Provide optional systemd unit to launch the stack in `infra/systemd/linux-rag.service`
+- [X] T008 [P] Generate Python gRPC stubs from `contracts/rag_service.proto` into `src/python/linux_rag/contracts/rag_service_pb2.py`
+- [X] T009 [P] Generate Go gRPC client bindings from `contracts/rag_service.proto` into `src/go/internal/contracts/rag_service.pb.go`
+- [X] T010 Create Python gRPC application skeleton with server bootstrap in `src/python/linux_rag/server/main.py`
+- [X] T011 [P] Define shared entities (`KnowledgeSource`, `CacheEntry`) in `src/python/linux_rag/data/models.py`
+- [X] T012 Establish SQLite schema and migrations for cache/session tables in `src/python/linux_rag/cache/schema.sql`
+- [X] T013 [P] Implement refresh scheduler service orchestrating on-demand and scheduled ingestion in `src/python/linux_rag/ingestion/scheduler.py`
+- [X] T014 Persist refresh cadence configuration and next-run metadata for status reporting in `src/python/linux_rag/ingestion/schedule_store.py`
+- [X] T015 [P] Implement cache eviction worker enforcing disk budget in `src/python/linux_rag/cache/eviction.py`
+- [X] T016 Instrument eviction telemetry (counters, gauges) exposed to status reporting in `src/python/linux_rag/cache/telemetry.py`
 
 ---
 
@@ -45,23 +45,23 @@
 
 ### Tests for User Story 1 (write first and watch them fail)
 
-- [ ] T017 [P] [US1] Add failing gRPC contract test for `Ask` in `tests/python/contracts/test_rag_service_ask.py`
-- [ ] T018 [P] [US1] Add CLI integration test for `ragman ask` workflow in `tests/python/integration/test_ragman_cli.py`
-- [ ] T019 [P] [US1] Add unit tests for retrieval and ranking pipeline in `tests/python/unit/test_retrieval_pipeline.py`
-- [ ] T020 [P] [US1] Add unit tests for cache eviction worker enforcing budget in `tests/python/unit/test_cache_eviction.py`
-- [ ] T021 [P] [US1] Add Go unit tests for `ragman` flag validation and error guidance in `src/go/cmd/ragman/main_test.go`
-- [ ] T022 [P] [US1] Add Go golden output tests for `ragman` JSON/text rendering in `src/go/cmd/ragman/output_test.go`
+- [X] T017 [P] [US1] Add failing gRPC contract test for `Ask` in `tests/python/contracts/test_rag_service_ask.py`
+- [X] T018 [P] [US1] Add CLI integration test for `ragman ask` workflow in `tests/python/integration/test_ragman_cli.py`
+- [X] T019 [P] [US1] Add unit tests for retrieval and ranking pipeline in `tests/python/unit/test_retrieval_pipeline.py`
+- [X] T020 [P] [US1] Add unit tests for cache eviction worker enforcing budget in `tests/python/unit/test_cache_eviction.py`
+- [X] T021 [P] [US1] Add Go unit tests for `ragman` flag validation and error guidance in `src/go/cmd/ragman/main_test.go`
+- [X] T022 [P] [US1] Add Go golden output tests for `ragman` JSON/text rendering in `src/go/cmd/ragman/output_test.go`
 
 ### Implementation for User Story 1
 
-- [ ] T023 [P] [US1] Implement retrieval orchestrator that queries Weaviate and reranks candidates in `src/python/linux_rag/retrieval/pipeline.py`
-- [ ] T024 [P] [US1] Implement answer synthesis with Ollama models and citation assembly in `src/python/linux_rag/llm/response_builder.py`
-- [ ] T025 [US1] Wire `Ask` gRPC handler and cache integration in `src/python/linux_rag/server/handlers/ask.py`
-- [ ] T026 [US1] Implement `ragman` cobra command with flags (`--model`, `--format`, `--no-cache`) in `src/go/cmd/ragman/main.go`
-- [ ] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
-- [ ] T028 [US1] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman/errors.go`
-- [ ] T029 [US1] Persist `AnswerSession` records with cache metadata in `src/python/linux_rag/retrieval/session_store.py`
-- [ ] T030 [US1] Update usage documentation for `ragman ask` scenarios in `docs/cli.md`
+- [X] T023 [P] [US1] Implement retrieval orchestrator that queries Weaviate and reranks candidates in `src/python/linux_rag/retrieval/pipeline.py`
+- [X] T024 [P] [US1] Implement answer synthesis with Ollama models and citation assembly in `src/python/linux_rag/llm/response_builder.py`
+- [X] T025 [US1] Wire `Ask` gRPC handler and cache integration in `src/python/linux_rag/server/handlers/ask.py`
+- [X] T026 [US1] Implement `ragman` cobra command with flags (`--model`, `--format`, `--no-cache`) in `src/go/cmd/ragman/main.go`
+- [X] T027 [US1] Add output formatting (text/JSON) and citation rendering helpers in `src/go/cmd/ragman/output.go`
+- [X] T028 [US1] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman/errors.go`
+- [X] T029 [US1] Persist `AnswerSession` records with cache metadata in `src/python/linux_rag/retrieval/session_store.py`
+- [X] T030 [US1] Update usage documentation for `ragman ask` scenarios in `docs/cli.md`
 
 ---
 
@@ -73,24 +73,24 @@
 
 ### Tests for User Story 2 (write first and watch them fail)
 
-- [ ] T031 [P] [US2] Add gRPC contract test for `RunIngestion`, `GetStatus`, and scheduled refresh reporting in `tests/python/contracts/test_run_ingestion.py`
-- [ ] T032 [P] [US2] Add admin CLI integration test covering `run -> ingest -> status` with schedule assertions in `tests/python/integration/test_ragman_admin_ingest.py`
-- [ ] T033 [P] [US2] Add unit tests for ingestion job orchestration and error recovery in `tests/python/unit/test_ingestion_pipeline.py`
-- [ ] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
-- [ ] T035 [P] [US2] Add Go unit tests for `ragman-admin` flag validation and error handling in `src/go/cmd/ragman-admin/main_test.go`
-- [ ] T036 [P] [US2] Add Go golden output tests for status/ingest summaries in `src/go/cmd/ragman-admin/status_test.go`
+- [X] T031 [P] [US2] Add gRPC contract test for `RunIngestion`, `GetStatus`, and scheduled refresh reporting in `tests/python/contracts/test_run_ingestion.py`
+- [X] T032 [P] [US2] Add admin CLI integration test covering `run -> ingest -> status` with schedule assertions in `tests/python/integration/test_ragman_admin_ingest.py`
+- [X] T033 [P] [US2] Add unit tests for ingestion job orchestration and error recovery in `tests/python/unit/test_ingestion_pipeline.py`
+- [X] T034 [P] [US2] Add unit tests for refresh scheduler triggers and cadence management in `tests/python/unit/test_refresh_scheduler.py`
+- [X] T035 [P] [US2] Add Go unit tests for `ragman-admin` flag validation and error handling in `src/go/cmd/ragman-admin/main_test.go`
+- [X] T036 [P] [US2] Add Go golden output tests for status/ingest summaries in `src/go/cmd/ragman-admin/status_test.go`
 
 ### Implementation for User Story 2
 
-- [ ] T037 [P] [US2] Implement Podman stack lifecycle control helpers in `src/python/linux_rag/server/control.py`
-- [ ] T038 [P] [US2] Build man page ingestion pipeline emitting `KnowledgeSource` records in `src/python/linux_rag/ingestion/man_pages.py`
-- [ ] T039 [P] [US2] Implement Kiwix archive download and import workflow in `src/python/linux_rag/ingestion/kiwix.py`
-- [ ] T040 [US2] Persist ingestion jobs, last refresh metrics, and failure history in `src/python/linux_rag/ingestion/jobs.py`
-- [ ] T041 [US2] Extend gRPC handlers for `RunIngestion`/`GetStatus` with telemetry and schedule metadata in `src/python/linux_rag/server/handlers/admin.py`
-- [ ] T042 [US2] Implement `ragman-admin` commands (`run`, `ingest`, `status`) in `src/go/cmd/ragman-admin/main.go`
-- [ ] T043 [US2] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman-admin/errors.go`
-- [ ] T044 [US2] Add progress, retries, schedule summary, and eviction telemetry output in `src/go/cmd/ragman-admin/status.go`
-- [ ] T045 [US2] Document refresh scheduling configuration, cache eviction reporting, and status expectations in `docs/cli.md`
+- [X] T037 [P] [US2] Implement Podman stack lifecycle control helpers in `src/python/linux_rag/server/control.py`
+- [X] T038 [P] [US2] Build man page ingestion pipeline emitting `KnowledgeSource` records in `src/python/linux_rag/ingestion/man_pages.py`
+- [X] T039 [P] [US2] Implement Kiwix archive download and import workflow in `src/python/linux_rag/ingestion/kiwix.py`
+- [X] T040 [US2] Persist ingestion jobs, last refresh metrics, and failure history in `src/python/linux_rag/ingestion/jobs.py`
+- [X] T041 [US2] Extend gRPC handlers for `RunIngestion`/`GetStatus` with telemetry and schedule metadata in `src/python/linux_rag/server/handlers/admin.py`
+- [X] T042 [US2] Implement `ragman-admin` commands (`run`, `ingest`, `status`) in `src/go/cmd/ragman-admin/main.go`
+- [X] T043 [US2] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman-admin/errors.go`
+- [X] T044 [US2] Add progress, retries, schedule summary, and eviction telemetry output in `src/go/cmd/ragman-admin/status.go`
+- [X] T045 [US2] Document refresh scheduling configuration, cache eviction reporting, and status expectations in `docs/cli.md`
 
 ---
 

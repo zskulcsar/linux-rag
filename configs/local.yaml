@@ -1,0 +1,50 @@
+# Base runtime configuration for local development of the Linux RAG stack.
+runtime:
+  # Unix domain socket exposed by the Python gRPC service for CLI clients.
+  socket_path: /run/linux-rag/rag-service.sock
+  # Default logging level for services launched via ragman-admin.
+  log_level: info
+
+stack:
+  # Podman compose file that provisions Weaviate, Ollama, and auxiliary services.
+  compose_file: infra/podman-compose.yml
+  # Podman compose project name to keep container resources namespaced.
+  project_name: linux-rag
+  # Maximum seconds to wait for stack readiness checks before failing.
+  wait_timeout_seconds: 120
+
+paths:
+  # Root directory for all persisted data managed by the stack.
+  data_root: /var/lib/linux-rag
+  # SQLite cache database directory (must live under data_root).
+  cache_dir: /var/lib/linux-rag/cache
+  # Location where Weaviate stores indexes and vector payloads.
+  weaviate_data_dir: /var/lib/linux-rag/weaviate
+  # Directory mounted into Ollama for downloaded model artifacts.
+  ollama_models_dir: /var/lib/linux-rag/ollama
+  # Directory used to store downloaded Kiwix archives before ingestion.
+  kiwix_archives_dir: /var/lib/linux-rag/kiwix
+  # Optional log directory for stack services.
+  logs_dir: /var/lib/linux-rag/logs
+
+services:
+  weaviate:
+    scheme: http
+    host: 127.0.0.1
+    port: 8080
+  ollama:
+    host: 127.0.0.1
+    port: 11434
+    # Default generation and embedding models expected to be available locally.
+    default_model: gemma3:1b
+    embedding_model: embeddinggemma
+
+ingestion:
+  # Default man page root scanned during initial ingestion.
+  manpage_root: /usr/share/man
+  # Local directory where extracted wiki content is staged.
+  wiki_extract_dir: /var/lib/linux-rag/kiwix/extracted
+  # Suggested Kiwix archives to fetch on first run; can be overridden by CLI flags.
+  default_wiki_archives:
+    - gemma-essential
+    - linux-desktop

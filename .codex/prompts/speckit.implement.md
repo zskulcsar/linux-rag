@@ -5,7 +5,7 @@ description: Execute the implementation plan by processing and executing all tas
 ## User Input
 
 ```text
-$ARGUMENTS
+Implement $ARGUMENTS only. You **must not** consider any other tasks.
 ```
 
 You **MUST** consider the user input before proceeding (if not empty).
@@ -91,21 +91,39 @@ You **MUST** use the configured MCP servers. use context7.
    - **Task details**: ID, description, file paths, parallel markers [P]
    - **Execution flow**: Order and dependency requirements
 
-6. Execute implementation following the task plan:
+6. Check the existence of tools and development dependencies
+   - **Check** Check if the `dependencies.md` file under `specs/FEATURE_DIR` is present. If there is use the tools and dependencies listed for the task respect them.
+   - **Verify** Verify if the tool or development dependency exist on the system. If the `dependencies.md` is listing different status for the tool than the verified status, update the file.
+   - **Report** Report the tools and their statuses as follows:
+
+## Tooling requirement report
+
+| Task ID | Required tool/dependency | Status | Installation command |
+|---------|--------------------------|--------|----------------------|
+
+   - **If any tools or development dependencies aremissing**:
+     * Display the table with incomplete item counts
+     * **STOP** and inform the user: "Some dependencies are missing. Please install them before running `/implement` again."
+     * Abort the exection
+   - **If all tools and development dependencies are present proceed to next step.**
+   - Output the report at this point only.
+
+
+7. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
    - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
-7. Implementation execution rules:
+8. Implementation execution rules:
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
    - **Integration work**: Database connections, middleware, logging, external services
    - **Polish and validation**: Unit tests, performance optimization, documentation
 
-8. Progress tracking and error handling:
+9. Progress tracking and error handling:
    - Report progress after each completed task
    - Halt execution if any non-parallel task fails
    - For parallel tasks [P], continue with successful tasks, report failed ones
@@ -113,7 +131,7 @@ You **MUST** use the configured MCP servers. use context7.
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
-9. Completion validation:
+10. Completion validation:
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements

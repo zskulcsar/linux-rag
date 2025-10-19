@@ -1,6 +1,11 @@
 [projects."/home/zsoltk/git/linux-rag"]
 trust_level = "trusted"
 
+# Context7 MCP server for dependency documentation
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+
+# Limited network
+[sandbox_workspace_write]
+network_access = true

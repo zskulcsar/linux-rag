@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.24.7
+    restart: unless-stopped
+    command:
+      - --host=0.0.0.0
+      - --port=8080
+    environment:
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      CLUSTER_HOSTNAME: node1
+      DEFAULT_VECTORIZER_MODULE: text2vec-ollama
+      ENABLE_MODULES: text2vec-ollama,generative-ollama
+      TEXT2VEC_OLLAMA_API_ENDPOINT: http://ollama:11434
+      TEXT2VEC_OLLAMA_MODEL: embeddinggemma
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      QUERY_DEFAULTS_LIMIT: "25"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ${LINUX_RAG_DATA_ROOT:-/var/lib/linux-rag}/weaviate:/var/lib/weaviate:Z
+    depends_on:
+      - ollama
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          if command -v curl >/dev/null 2>&1;
+          then curl -sf http://localhost:8080/v1/.well-known/ready;
+          else wget -q --spider http://localhost:8080/v1/.well-known/ready;
+          fi
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:0.3.12
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ${LINUX_RAG_DATA_ROOT:-/var/lib/linux-rag}/ollama:/root/.ollama:Z
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
