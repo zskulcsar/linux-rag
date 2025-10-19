@@ -68,7 +68,38 @@ This guide covers the local prerequisites and bootstrap flow for bringing up the
    ./bin/ragman-admin status
    ```
 
-   Confirm cache usage, active models, and the latest ingestion job status before handing the system to end users.
+   The status command now surfaces ingestion progress, retry counts, refresh cadence, and cache eviction telemetry. A sample text report looks like:
+
+   ```
+   Latest ingestion job: job-123 (completed)
+   Progress: 75.0% (stage: indexing)
+   Retries: 1
+   Man pages processed: 1234
+   Wiki articles loaded: 567
+   Errors: none
+
+   Schedule summary:
+     Cadence: 24h
+     Next run: 2025-01-01T12:00:00Z
+     Last success: 2025-01-01T09:00:00Z
+
+   Cache usage: 42.5% (hit rate: 78%)
+   Eviction telemetry:
+     Total entries: 2048
+     Total size: 512.0 MiB / 1.0 GiB
+     Last eviction: n/a
+     Removed: 12 entries (11.8 MiB)
+
+   Active models: gemma3:1b, codegemma:2b
+   ```
+
+   Use `--format json` for machine parsing:
+
+   ```bash
+   ./bin/ragman-admin status --format json | jq .
+   ```
+
+   JSON output includes the same fields plus raw ingestion errors, making it easy to feed dashboards or alerting rules.
 
 7. **Ask questions**
 
@@ -118,3 +149,28 @@ This guide covers the local prerequisites and bootstrap flow for bringing up the
 - Run Go tests: `go test ./src/go/...`
 
 These commands help confirm the environment is healthy before further development.
+
+## Refresh Scheduling
+
+- The scheduler defaults to a **24-hour cadence** for automatic refreshes. The configured cadence, next run, and last success timestamps are displayed under the “Schedule summary” section of `ragman-admin status`.
+- Refresh metadata is persisted in `refresh_schedule.db` (default location: `/var/lib/linux-rag/state/refresh_schedule.db`). Update the cadence with SQLite if you need to change the schedule:
+
+  ```bash
+  sqlite3 /var/lib/linux-rag/state/refresh_schedule.db \
+    "UPDATE refresh_schedule SET cadence_seconds = 43200 WHERE id = 1;"
+  ```
+
+  The example above switches the cadence to **12 hours** (`43200` seconds). Set `cadence_seconds` to `NULL` to disable automatic runs; `ragman-admin status` will then show “Cadence: disabled”.
+- After adjusting the cadence, run `ragman-admin status --format json` to confirm the scheduler picked up the new value.
+
+## Cache Eviction Reporting
+
+- `ragman-admin status` reports cache health so you can keep `/var/lib/linux-rag/cache` within the 10% disk budget:
+  - `Cache usage` displays the current percentage plus the query cache hit rate.
+  - `Eviction telemetry` provides the total entries, total disk usage, the configured budget (default **1 GiB**), and details from the most recent eviction pass (timestamp, removed entries, bytes freed).
+- If you see cache usage consistently above the budget or repeated evictions freeing large amounts of data, consider increasing the disk allocation or tightening ingestion cadence so stale data is recycled sooner.
+- For troubleshooting, inspect `/var/lib/linux-rag/cache` directly or enable JSON output to feed the telemetry into monitoring tools:
+
+  ```bash
+  ./bin/ragman-admin status --format json | jq '.eviction'
+  ```

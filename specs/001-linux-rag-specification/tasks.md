@@ -90,7 +90,7 @@
 - [X] T042 [US2] Implement `ragman-admin` commands (`run`, `ingest`, `status`) in `src/go/cmd/ragman-admin/main.go`
 - [X] T043 [US2] Implement invalid flag handling and user guidance responses in `src/go/cmd/ragman-admin/errors.go`
 - [X] T044 [US2] Add progress, retries, schedule summary, and eviction telemetry output in `src/go/cmd/ragman-admin/status.go`
-- [ ] T045 [US2] Document refresh scheduling configuration, cache eviction reporting, and status expectations in `docs/cli.md`
+- [X] T045 [US2] Document refresh scheduling configuration, cache eviction reporting, and status expectations in `docs/cli.md`
 
 ---
 
