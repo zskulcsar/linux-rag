@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import signal
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -53,17 +54,21 @@ class ServerConfig:
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "ServerConfig":
         runtime = data.get("runtime", {}) if isinstance(data, dict) else {}
-        socket_path = Path(runtime.get("socket_path", DEFAULT_SOCKET_PATH)).expanduser().resolve()
+        socket_path = _resolve_path_value(runtime.get("socket_path"), DEFAULT_SOCKET_PATH)
         log_level = str(runtime.get("log_level", DEFAULT_LOG_LEVEL)).lower()
         paths_cfg = data.get("paths", {}) if isinstance(data, dict) else {}
-        data_root = Path(paths_cfg.get("data_root", "/var/lib/linux-rag")).expanduser().resolve()
-        cache_dir = Path(paths_cfg.get("cache_dir", data_root / "cache")).expanduser().resolve()
-        wiki_archives_dir = Path(paths_cfg.get("kiwix_archives_dir", data_root / "kiwix")).expanduser().resolve()
+        data_root = _resolve_path_value(paths_cfg.get("data_root"), Path("/var/lib/linux-rag"))
+        cache_dir = _resolve_path_value(paths_cfg.get("cache_dir"), data_root / "cache")
+        wiki_archives_dir = _resolve_path_value(
+            paths_cfg.get("kiwix_archives_dir"), data_root / "kiwix"
+        )
         ingestion_cfg = data.get("ingestion", {}) if isinstance(data, dict) else {}
-        manpage_root = Path(ingestion_cfg.get("manpage_root", "/usr/share/man")).expanduser().resolve()
-        wiki_extract_dir = Path(
-            ingestion_cfg.get("wiki_extract_dir", wiki_archives_dir / "extracted")
-        ).expanduser().resolve()
+        manpage_root = _resolve_path_value(
+            ingestion_cfg.get("manpage_root"), Path("/usr/share/man")
+        )
+        wiki_extract_dir = _resolve_path_value(
+            ingestion_cfg.get("wiki_extract_dir"), wiki_archives_dir / "extracted"
+        )
         default_wiki_archives = tuple(
             str(item)
             for item in ingestion_cfg.get("default_wiki_archives", ())
@@ -91,6 +96,58 @@ class ServerConfig:
             default_wiki_archives=tuple(default_wiki_archives),
             active_models=tuple(active_models),
         )
+
+
+def _resolve_path_value(value: Any, default: Path) -> Path:
+    """Expand environment variables and ~ in configuration path values."""
+    if isinstance(value, Path):
+        candidate = value
+    else:
+        text = str(value).strip() if value is not None else ""
+        if not text:
+            candidate = default
+        else:
+            expanded = os.path.expandvars(text)
+            expanded = os.path.expanduser(expanded)
+            candidate = Path(expanded) if expanded else default
+    return candidate.expanduser().resolve()
+
+
+def _fallback_socket_path(original: Path) -> Path:
+    """Select a writable fallback socket path when the preferred path is unavailable."""
+    name = original.name or "rag-service.sock"
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
+    candidates: list[Path] = []
+    if runtime_dir:
+        candidates.append(Path(runtime_dir) / "linux-rag" / name)
+    candidates.append(Path("/tmp/linux-rag") / name)
+
+    last_error: PermissionError | None = None
+    for candidate in candidates:
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except PermissionError as exc:
+            last_error = exc
+            continue
+
+    message = (
+        "Unable to create a writable fallback for the runtime socket; "
+        "set LINUX_RAG_SOCKET to a directory owned by the current user or "
+        "pre-create the preferred directory with correct permissions."
+    )
+    raise PermissionError(message) from last_error
+
+
+def _unlink_socket(path: Path) -> None:
+    """Remove a stale socket if the file already exists."""
+    try:
+        if path.exists():
+            path.unlink()
+    except FileNotFoundError:  # pragma: no cover - race: file removed between exists/unlink
+        return
+    except PermissionError as exc:
+        raise PermissionError(f"Unable to remove existing socket at {path}: {exc}") from exc
 
 
 class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
@@ -164,10 +221,21 @@ def _configure_logging(level_name: str) -> None:
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s")
 
 
-def _prepare_socket(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        path.unlink()
+def _prepare_socket(path: Path) -> Path:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        candidate = path
+    except PermissionError as exc:
+        candidate = _fallback_socket_path(path)
+        logging.warning(
+            "Unable to create socket directory %s (%s). Falling back to %s. "
+            "Set LINUX_RAG_SOCKET or pre-create the runtime directory to silence this warning.",
+            path.parent,
+            exc,
+            candidate,
+        )
+    _unlink_socket(candidate)
+    return candidate
 
 
 def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
@@ -231,7 +299,13 @@ def _create_server(config: ServerConfig) -> Server:
 
 async def _serve(config: ServerConfig) -> None:
     _configure_logging(config.log_level)
-    _prepare_socket(config.socket_path)
+    try:
+        socket_path = _prepare_socket(config.socket_path)
+    except PermissionError as exc:
+        logging.error("Failed to prepare unix socket %s: %s", config.socket_path, exc)
+        raise SystemExit(1) from exc
+    if socket_path != config.socket_path:
+        config = replace(config, socket_path=socket_path)
 
     server = _create_server(config)
     await server.start()

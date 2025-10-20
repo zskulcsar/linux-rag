@@ -8,7 +8,7 @@ runtime:
 
 stack:
   # Podman compose file that provisions Weaviate, Ollama, and auxiliary services.
-  compose_file: infra/podman-compose.yml
+  compose_file: ../infra/podman-compose.yml
   # Podman compose project name to keep container resources namespaced.
   project_name: linux-rag
   # Maximum seconds to wait for stack readiness checks before failing.
@@ -16,17 +16,17 @@ stack:
 
 paths:
   # Root directory for all persisted data managed by the stack.
-  data_root: /var/lib/linux-rag
+  data_root: ./.tmp/linux-rag
   # SQLite cache database directory (must live under data_root).
-  cache_dir: /var/lib/linux-rag/cache
+  cache_dir: ./.tmp/linux-rag/cache
   # Location where Weaviate stores indexes and vector payloads.
-  weaviate_data_dir: /var/lib/linux-rag/weaviate
+  weaviate_data_dir: ./.tmp/linux-rag/weaviate
   # Directory mounted into Ollama for downloaded model artifacts.
-  ollama_models_dir: /var/lib/linux-rag/ollama
+  ollama_models_dir: ./.tmp/linux-rag/ollama
   # Directory used to store downloaded Kiwix archives before ingestion.
-  kiwix_archives_dir: /var/lib/linux-rag/kiwix
+  kiwix_archives_dir: ./.tmp/linux-rag/kiwix
   # Optional log directory for stack services.
-  logs_dir: /var/lib/linux-rag/logs
+  logs_dir: ./.tmp/linux-rag/logs
 
 services:
   weaviate:

@@ -2,7 +2,8 @@ version: "3.9"
 
 services:
   weaviate:
-    image: semitechnologies/weaviate:1.24.7
+    image: docker.io/semitechnologies/weaviate:1.33.1
+    container_name: linux-rag_weaviate_1
     restart: unless-stopped
     command:
       - --host=0.0.0.0
@@ -35,7 +36,8 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama:0.3.12
+    image: docker.io/ollama/ollama:latest
+    container_name: linux-rag_ollama_1
     restart: unless-stopped
     environment:
       OLLAMA_HOST: 0.0.0.0

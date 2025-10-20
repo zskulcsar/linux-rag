@@ -16,7 +16,7 @@ PROTO_FILE := $(PROTO_SRC_DIR)/rag_service.proto
 .PHONY: help init init-python init-go lint lint-python lint-go format format-python format-go \
 	typecheck typecheck-python test test-python test-go build-cli proto clean \
 	test-integration coverage-python security-audit security-audit-python security-audit-go \
-	security-audit-fix go-audit-fix pip-audit-fix
+	security-audit-fix go-audit-fix pip-audit-fix stack-up stack-down
 
 help:
 	@printf "Available targets:\n"
@@ -33,6 +33,8 @@ help:
 	@printf "  security-audit     Run Python (pip-audit) and Go (govulncheck) vulnerability scans\n"
 	@printf "  security-audit-fix  Run vulnerability scans with optional remediation\n"
 	@printf "  pip-audit-fix      Run pip-audit dry run, then optionally apply fixes\n"
+	@printf "  stack-up           Run the ragman-admin command to start-up the podman-compose stack"
+	@printg "  stack-down         Run podman-compose (no down yet in ragman-admin) to stop the stack"
 
 lint: lint-python lint-go
 
@@ -220,3 +222,11 @@ go-audit-fix:
 	else \
 		echo "Go source directory not found; skipping Go vulnerability remediation."; \
 	fi
+
+stack-up:
+	cd $(GO_ROOT) && PYTHONPATH=$(shell pwd) LINUX_RAG_SOCKET="${XDG_RUNTIME_DIR:-/.tmp}/linux-rag/rag-service.sock" \
+	go run ./cmd/ragman-admin run --config /home/zsoltk/git/linux-rag/configs/test.yaml --wait-ready
+
+stack-down:
+	cd infra && podman-compose down --remove-orphans --timeout 30
+

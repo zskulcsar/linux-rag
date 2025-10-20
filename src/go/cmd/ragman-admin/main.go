@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
@@ -426,11 +427,17 @@ func newRunCmd(rootOpts *rootOptions) *cobra.Command {
 				return errorWithGuidance(cmd, err.Error())
 			}
 
+			socketPath, err := prepareRuntimeSocket(cmd, cfg.Runtime.SocketPath)
+			if err != nil {
+				return errorWithGuidance(cmd, err.Error())
+			}
+			cfg.Runtime.SocketPath = socketPath
+
 			if err := startStackProcess(cmd, cfg); err != nil {
 				return err
 			}
 
-			if err := launchServer(cmd, configPath); err != nil {
+			if err := launchServer(cmd, configPath, socketPath); err != nil {
 				return err
 			}
 
@@ -476,6 +483,91 @@ func ensureDirectories(cfg adminConfig) error {
 	return nil
 }
 
+func prepareRuntimeSocket(cmd *cobra.Command, socketPath string) (string, error) {
+	clean := filepath.Clean(socketPath)
+	if clean == "" {
+		clean = defaultSocketPath
+	}
+	abs, err := filepath.Abs(clean)
+	if err != nil {
+		return "", fmt.Errorf("unable to resolve socket path %s: %w", socketPath, err)
+	}
+
+	parent := filepath.Dir(abs)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		if os.IsPermission(err) {
+			fallback, fallbackErr := selectFallbackSocket(abs)
+			if fallbackErr != nil {
+				return "", fallbackErr
+			}
+			fmt.Fprintf(
+				cmd.ErrOrStderr(),
+				"warning: unable to create socket directory %s (%v); falling back to %s\n"+
+					"         set LINUX_RAG_SOCKET to silence this warning or pre-create the directory.\n",
+				parent,
+				err,
+				fallback,
+			)
+			abs = fallback
+		} else {
+			return "", fmt.Errorf("unable to create socket directory %s: %w", parent, err)
+		}
+	}
+
+	if err := removeStaleSocket(abs); err != nil {
+		return "", err
+	}
+
+	return abs, nil
+}
+
+func selectFallbackSocket(original string) (string, error) {
+	name := filepath.Base(original)
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	candidates := []string{}
+	if runtimeDir != "" {
+		candidates = append(candidates, filepath.Join(runtimeDir, "linux-rag", name))
+	}
+	candidates = append(candidates, filepath.Join(os.TempDir(), "linux-rag", name))
+
+	var lastErr error
+	for _, candidate := range candidates {
+		parent := filepath.Dir(candidate)
+		if err := os.MkdirAll(parent, 0o755); err != nil {
+			if os.IsPermission(err) {
+				lastErr = err
+				continue
+			}
+			return "", fmt.Errorf("unable to provision fallback socket directory %s: %w", parent, err)
+		}
+		return candidate, nil
+	}
+
+	message := "unable to create a writable directory for the runtime socket; " +
+		"set LINUX_RAG_SOCKET to a user-owned directory or adjust permissions on the target path"
+	if lastErr != nil {
+		return "", fmt.Errorf("%s: %w", message, lastErr)
+	}
+	return "", errors.New(message)
+}
+
+func removeStaleSocket(socketPath string) error {
+	info, err := os.Lstat(socketPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("unable to stat existing socket %s: %w", socketPath, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("expected socket file at %s but found a directory", socketPath)
+	}
+	if err := os.Remove(socketPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("unable to remove stale socket %s: %w", socketPath, err)
+	}
+	return nil
+}
+
 func startStackProcess(cmd *cobra.Command, cfg adminConfig) error {
 	binary := cfg.Stack.Binary
 	args := []string{
@@ -503,12 +595,37 @@ func startStackProcess(cmd *cobra.Command, cfg adminConfig) error {
 	return nil
 }
 
-func launchServer(cmd *cobra.Command, configPath string) error {
+func launchServer(cmd *cobra.Command, configPath, socketPath string) error {
 	repoRoot := filepath.Dir(filepath.Dir(configPath))
-	serverCmd := exec.CommandContext(cmd.Context(), "uv", "run", "python", "-m", "linux_rag.server.main", "--config", configPath)
+	serverCmd := exec.CommandContext(
+		cmd.Context(),
+		"uv",
+		"run",
+		"python",
+		"-m",
+		"linux_rag.server.main",
+		"--config",
+		configPath,
+		"--socket",
+		socketPath,
+	)
 	if _, err := os.Stat(repoRoot); err == nil {
 		serverCmd.Dir = repoRoot
 	}
+	repoPythonPath := filepath.Join(repoRoot, "src", "python")
+	existingPY := os.Getenv("PYTHONPATH")
+	var pythonPath string
+	if existingPY == "" {
+		pythonPath = repoPythonPath
+	} else {
+		pythonPath = repoPythonPath + string(os.PathListSeparator) + existingPY
+	}
+	env := os.Environ()
+	env = append(env,
+		"PYTHONPATH="+pythonPath,
+		fmt.Sprintf("LINUX_RAG_SOCKET=%s", socketPath),
+	)
+	serverCmd.Env = env
 	serverCmd.Stdout = cmd.OutOrStdout()
 	serverCmd.Stderr = cmd.ErrOrStderr()
 	if err := serverCmd.Start(); err != nil {

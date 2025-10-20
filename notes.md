@@ -39,6 +39,7 @@ This will implement the task which you should verify and commit the changes to g
 * The `.codex/prompts/speckit.implement.md` file can be modified so that the whole prompt doesn't need to be typed every time and `/implement` can be called with a \<task_id\> only.
 * Using the provided `make *` commands after the task implementation is a good idea to verify. On issues ask codex to fix them.
 * Method documentation is really nothing, will need to fix later
+* TODO: We're missing the stop/down command in go `ragman-admin`
 
 ## Task notes
 
@@ -70,6 +71,10 @@ This will implement the task which you should verify and commit the changes to g
     if we need offline copies we can run it in an environment with network access, then commit the resulting `vendor` tree.
 > 2. If we’re keeping local replacements (e.g., our shim Cobra/pflag implementations), we must keep the replace directives in `go.mod` and ensure `modules.txt` includes the `## replace` lines the toolchain generates.
 > 3. Alternatively, if we don’t truly need vendoring, we could remove the `vendor/` directory so Go stops enforcing `modules.txt`; but that only works if we regain network access.
+
+## How to test
+
+* start the stack with `PYTHONPATH=/home/zsoltk/git/linux-rag LINUX_RAG_SOCKET="${XDG_RUNTIME_DIR:-/tmp}/linux-rag/rag-service.sock" go run ./cmd/ragman-admin run --config /home/zsoltk/git/linux-rag/configs/test.yaml --wait-ready` in `src/go`
 
 #### Where we left off
 codex resume 0199eeaa-5207-7c22-8c9b-bed94f73cb5c

@@ -11,7 +11,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 GO_ROOT = REPO_ROOT / "src" / "go"
-DEFAULT_CONFIG = REPO_ROOT / "configs" / "local.yaml"
+DEFAULT_CONFIG = REPO_ROOT / "configs" / "test.yaml"
 
 pytestmark = pytest.mark.integration
 

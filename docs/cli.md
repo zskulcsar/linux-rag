@@ -37,11 +37,24 @@ This guide covers the local prerequisites and bootstrap flow for bringing up the
 
    The default configuration lives in `configs/local.yaml`. Key paths include:
 
-   - `runtime.socket_path`: `/run/linux-rag/rag-service.sock`
+   - `runtime.socket_path`: defaults to `/run/linux-rag/rag-service.sock` (override with `$LINUX_RAG_SOCKET`)
    - `paths.data_root`: `/var/lib/linux-rag`
    - `paths.ollama_models_dir`: `/var/lib/linux-rag/ollama`
 
    Adjust values if your host uses different locations or if Podman requires alternative volume mounts.
+
+### Socket permissions
+
+Unprivileged shells usually cannot create `/run/linux-rag`. Point the runtime socket at a writable directory before starting the stack:
+
+```bash
+export LINUX_RAG_SOCKET="${XDG_RUNTIME_DIR:-/tmp}/linux-rag/rag-service.sock"
+./bin/ragman-admin run --config configs/local.yaml --wait-ready
+```
+
+The admin CLI propagates this path to the Python server and to subsequent status or ingest commands. If you omit the variable, both processes attempt to use `/run/linux-rag`; the server will fall back to `$XDG_RUNTIME_DIR/linux-rag/` or `/tmp/linux-rag/`, but matching the override avoids connection mismatches.
+
+For systemd deployments, configure a `RuntimeDirectory=linux-rag` in the unit or ship a `tmpfiles.d` rule so `/run/linux-rag` exists with the correct ownership before the service starts.
 
 4. **Launch the stack**
 
