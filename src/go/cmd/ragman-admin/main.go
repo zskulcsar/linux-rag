@@ -117,10 +117,10 @@ func defaultAdminConfig() adminConfig {
 }
 
 func (c *adminConfig) applyDefaults(baseDir string) {
-	if c.Runtime.SocketPath == "" {
-		c.Runtime.SocketPath = defaultSocketPath
-	}
 	c.Runtime.SocketPath = resolvePath(c.Runtime.SocketPath, baseDir)
+	if c.Runtime.SocketPath == "" {
+		c.Runtime.SocketPath = resolvePath(defaultSocketPath, baseDir)
+	}
 
 	if c.Stack.ComposeFile == "" {
 		c.Stack.ComposeFile = defaultComposeFile
@@ -143,14 +143,12 @@ func (c *adminConfig) applyDefaults(baseDir string) {
 	c.Paths.KiwixArchivesDir = defaultIfEmptyPath(c.Paths.KiwixArchivesDir, filepath.Join(c.Paths.DataRoot, "kiwix"), baseDir)
 	c.Paths.LogsDir = defaultIfEmptyPath(c.Paths.LogsDir, filepath.Join(c.Paths.DataRoot, "logs"), baseDir)
 
-	if c.Ingestion.ManpageRoot == "" {
-		c.Ingestion.ManpageRoot = "/usr/share/man"
-	}
-	c.Ingestion.ManpageRoot = resolvePath(c.Ingestion.ManpageRoot, baseDir)
-	if c.Ingestion.WikiExtractDir == "" {
-		c.Ingestion.WikiExtractDir = filepath.Join(c.Paths.KiwixArchivesDir, "extracted")
-	}
-	c.Ingestion.WikiExtractDir = resolvePath(c.Ingestion.WikiExtractDir, baseDir)
+	c.Ingestion.ManpageRoot = defaultIfEmptyPath(c.Ingestion.ManpageRoot, "/usr/share/man", baseDir)
+	c.Ingestion.WikiExtractDir = defaultIfEmptyPath(
+		c.Ingestion.WikiExtractDir,
+		filepath.Join(c.Paths.KiwixArchivesDir, "extracted"),
+		baseDir,
+	)
 
 	if c.Ingestion.DefaultWikiArchives == nil {
 		c.Ingestion.DefaultWikiArchives = []string{}
@@ -162,6 +160,12 @@ func resolvePath(value, baseDir string) string {
 		return value
 	}
 	expanded := os.ExpandEnv(value)
+	if expanded == "" {
+		return expanded
+	}
+	if strings.Contains(expanded, "://") {
+		return expanded
+	}
 	if filepath.IsAbs(expanded) {
 		return filepath.Clean(expanded)
 	}
@@ -172,10 +176,11 @@ func resolvePath(value, baseDir string) string {
 }
 
 func defaultIfEmptyPath(current, fallback, baseDir string) string {
-	if current == "" {
-		current = fallback
+	resolved := resolvePath(current, baseDir)
+	if resolved != "" {
+		return resolved
 	}
-	return resolvePath(current, baseDir)
+	return resolvePath(fallback, baseDir)
 }
 
 func loadConfig(path string) (adminConfig, error) {
@@ -185,6 +190,11 @@ func loadConfig(path string) (adminConfig, error) {
 	}
 	cfg.applyDefaults(filepath.Dir(path))
 	return cfg, nil
+}
+
+func shouldSkipStack() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("LINUX_RAG_SKIP_STACK")))
+	return value == "1" || value == "true" || value == "yes"
 }
 
 func parseConfigFile(path string, cfg *adminConfig) error {
@@ -433,8 +443,13 @@ func newRunCmd(rootOpts *rootOptions) *cobra.Command {
 			}
 			cfg.Runtime.SocketPath = socketPath
 
-			if err := startStackProcess(cmd, cfg); err != nil {
-				return err
+			skipStack := shouldSkipStack()
+			if !skipStack {
+				if err := startStackProcess(cmd, cfg); err != nil {
+					return err
+				}
+			} else {
+				fmt.Fprintln(cmd.ErrOrStderr(), "info: skipping stack launch (LINUX_RAG_SKIP_STACK set)")
 			}
 
 			if err := launchServer(cmd, configPath, socketPath); err != nil {
@@ -483,18 +498,44 @@ func ensureDirectories(cfg adminConfig) error {
 	return nil
 }
 
-func prepareRuntimeSocket(cmd *cobra.Command, socketPath string) (string, error) {
-	clean := filepath.Clean(socketPath)
-	if clean == "" {
-		clean = defaultSocketPath
+func ensureDirWritable(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
 	}
+	probe, err := os.CreateTemp(dir, ".socket-probe-*")
+	if err != nil {
+		return err
+	}
+	name := probe.Name()
+	if err := probe.Close(); err != nil {
+		return err
+	}
+	if err := os.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+func prepareRuntimeSocket(cmd *cobra.Command, socketPath string) (string, error) {
+	trimmed := strings.TrimSpace(socketPath)
+	lowered := strings.ToLower(trimmed)
+	if strings.HasPrefix(lowered, "tcp://") {
+		return trimmed, nil
+	}
+	if strings.HasPrefix(lowered, "unix://") {
+		trimmed = trimmed[len("unix://"):]
+	}
+	if trimmed == "" {
+		trimmed = defaultSocketPath
+	}
+	clean := filepath.Clean(trimmed)
 	abs, err := filepath.Abs(clean)
 	if err != nil {
 		return "", fmt.Errorf("unable to resolve socket path %s: %w", socketPath, err)
 	}
 
 	parent := filepath.Dir(abs)
-	if err := os.MkdirAll(parent, 0o755); err != nil {
+	if err := ensureDirWritable(parent); err != nil {
 		if os.IsPermission(err) {
 			fallback, fallbackErr := selectFallbackSocket(abs)
 			if fallbackErr != nil {
@@ -510,7 +551,7 @@ func prepareRuntimeSocket(cmd *cobra.Command, socketPath string) (string, error)
 			)
 			abs = fallback
 		} else {
-			return "", fmt.Errorf("unable to create socket directory %s: %w", parent, err)
+			return "", fmt.Errorf("unable to prepare socket directory %s: %w", parent, err)
 		}
 	}
 
@@ -533,7 +574,7 @@ func selectFallbackSocket(original string) (string, error) {
 	var lastErr error
 	for _, candidate := range candidates {
 		parent := filepath.Dir(candidate)
-		if err := os.MkdirAll(parent, 0o755); err != nil {
+		if err := ensureDirWritable(parent); err != nil {
 			if os.IsPermission(err) {
 				lastErr = err
 				continue

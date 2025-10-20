@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import signal
+import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -16,6 +19,17 @@ pytestmark = pytest.mark.integration
 
 
 def test_server_honors_socket_env_override(tmp_path) -> None:
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    probe_path = Path(tempfile.gettempdir()) / f"linux-rag-probe-{uuid4().hex}.sock"
+    try:
+        probe.bind(str(probe_path))
+    except OSError:
+        probe.close()
+        pytest.skip("Unix sockets are not permitted in this environment; skipping server override test.")
+    finally:
+        probe.close()
+        probe_path.unlink(missing_ok=True)
+
     socket_path = tmp_path / "rag-service.sock"
     env = os.environ.copy()
     existing_py = env.get("PYTHONPATH", "")

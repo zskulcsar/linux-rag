@@ -40,6 +40,7 @@ This will implement the task which you should verify and commit the changes to g
 * Using the provided `make *` commands after the task implementation is a good idea to verify. On issues ask codex to fix them.
 * Method documentation is really nothing, will need to fix later
 * TODO: We're missing the stop/down command in go `ragman-admin`
+* Due to socket permission issues (and for testability) a new environment variable was introduced: `LINUX_RAG_SKIP_STACK` with values `1`, `true`, `yes` to skip integration tests. It is now the default in `./tests/python/integration/test_ragman_admin_ingest.py`.
 
 ## Task notes
 

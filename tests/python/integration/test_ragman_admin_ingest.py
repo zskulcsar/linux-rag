@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
+import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -24,6 +27,10 @@ def _ensure_go_env() -> dict[str, str]:
     go_mod_cache.mkdir(exist_ok=True)
     env.setdefault("GOCACHE", str(go_cache))
     env.setdefault("GOMODCACHE", str(go_mod_cache))
+    #env.setdefault("LINUX_RAG_SKIP_STACK", "1")
+    uv_cache = REPO_ROOT / ".uv-cache"
+    uv_cache.mkdir(exist_ok=True)
+    env.setdefault("UV_CACHE_DIR", str(uv_cache))
     return env
 
 
@@ -46,6 +53,16 @@ def _run_admin_cli(*args: str) -> subprocess.CompletedProcess[str]:
 
 def test_ragman_admin_run_ingest_status_workflow() -> None:
     """Expect ragman-admin run -> ingest -> status to succeed and surface schedule metadata."""
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    probe_path = Path(tempfile.gettempdir()) / f"linux-rag-probe-{uuid4().hex}.sock"
+    try:
+        probe.bind(str(probe_path))
+    except OSError:
+        probe.close()
+        pytest.skip("Unix sockets are not permitted in this environment; skipping CLI integration test.")
+    finally:
+        probe.close()
+        probe_path.unlink(missing_ok=True)
 
     result_run = _run_admin_cli("run", "--config", str(DEFAULT_CONFIG), "--wait-ready")
     assert (

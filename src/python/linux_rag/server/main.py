@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import signal
+import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable
@@ -31,6 +32,7 @@ except ImportError:  # pragma: no cover - will be caught during runtime bootstra
 
 DEFAULT_CONFIG_PATH = Path("configs/local.yaml")
 DEFAULT_SOCKET_PATH = Path("/run/linux-rag/rag-service.sock")
+DEFAULT_SOCKET_ENDPOINT = f"unix://{DEFAULT_SOCKET_PATH}"
 DEFAULT_LOG_LEVEL = "info"
 CACHE_BUDGET_BYTES = 1_073_741_824
 
@@ -39,7 +41,7 @@ CACHE_BUDGET_BYTES = 1_073_741_824
 class ServerConfig:
     """Runtime configuration for the gRPC server."""
 
-    socket_path: Path = DEFAULT_SOCKET_PATH
+    socket_endpoint: str = DEFAULT_SOCKET_ENDPOINT
     log_level: str = DEFAULT_LOG_LEVEL
     data_root: Path = Path("/var/lib/linux-rag")
     cache_dir: Path = Path("/var/lib/linux-rag/cache")
@@ -54,7 +56,7 @@ class ServerConfig:
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "ServerConfig":
         runtime = data.get("runtime", {}) if isinstance(data, dict) else {}
-        socket_path = _resolve_path_value(runtime.get("socket_path"), DEFAULT_SOCKET_PATH)
+        socket_endpoint = _resolve_socket_endpoint(runtime.get("socket_path"), DEFAULT_SOCKET_PATH)
         log_level = str(runtime.get("log_level", DEFAULT_LOG_LEVEL)).lower()
         paths_cfg = data.get("paths", {}) if isinstance(data, dict) else {}
         data_root = _resolve_path_value(paths_cfg.get("data_root"), Path("/var/lib/linux-rag"))
@@ -84,7 +86,7 @@ class ServerConfig:
             if value:
                 active_models.append(str(value))
         return cls(
-            socket_path=socket_path,
+            socket_endpoint=socket_endpoint,
             log_level=log_level,
             data_root=data_root,
             cache_dir=cache_dir,
@@ -96,6 +98,33 @@ class ServerConfig:
             default_wiki_archives=tuple(default_wiki_archives),
             active_models=tuple(active_models),
         )
+
+
+def _resolve_socket_endpoint(value: Any, default: Path) -> str:
+    """Resolve socket configuration to a fully-qualified gRPC endpoint."""
+    text = ""
+    if isinstance(value, Path):
+        text = str(value)
+    elif value is not None:
+        text = str(value).strip()
+
+    if not text:
+        return f"unix://{default}"
+
+    expanded = os.path.expandvars(text)
+    expanded = os.path.expanduser(expanded)
+    if not expanded:
+        return f"unix://{default}"
+
+    lowered = expanded.lower()
+    if lowered.startswith("tcp://"):
+        return expanded
+    if lowered.startswith("unix://"):
+        socket_path = Path(expanded[len("unix://") :])
+        return f"unix://{socket_path.expanduser().resolve()}"
+
+    socket_path = Path(expanded)
+    return f"unix://{socket_path.expanduser().resolve()}"
 
 
 def _resolve_path_value(value: Any, default: Path) -> Path:
@@ -125,7 +154,7 @@ def _fallback_socket_path(original: Path) -> Path:
     last_error: PermissionError | None = None
     for candidate in candidates:
         try:
-            candidate.parent.mkdir(parents=True, exist_ok=True)
+            _ensure_parent_ready(candidate.parent)
             return candidate
         except PermissionError as exc:
             last_error = exc
@@ -148,6 +177,16 @@ def _unlink_socket(path: Path) -> None:
         return
     except PermissionError as exc:
         raise PermissionError(f"Unable to remove existing socket at {path}: {exc}") from exc
+
+
+def _ensure_parent_ready(parent: Path) -> None:
+    """Ensure the socket directory exists and is writable."""
+    parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with tempfile.TemporaryFile(dir=parent):
+            pass
+    except OSError as exc:
+        raise PermissionError(f"Cannot create files in {parent}: {exc}") from exc
 
 
 class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
@@ -223,7 +262,7 @@ def _configure_logging(level_name: str) -> None:
 
 def _prepare_socket(path: Path) -> Path:
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        _ensure_parent_ready(path.parent)
         candidate = path
     except PermissionError as exc:
         candidate = _fallback_socket_path(path)
@@ -292,24 +331,68 @@ def _create_server(config: ServerConfig) -> Server:
         admin_handler=_build_admin_handler(config),
     )
     rag_service_pb2_grpc.add_RagServiceServicer_to_server(dispatcher, server)
-    bind_target = f"unix:{config.socket_path}"
-    server.add_insecure_port(bind_target)
     return server
+
+
+def _bind_server(server: Server, endpoint: str) -> str:
+    """Bind the gRPC server to the requested endpoint, with TCP fallback if needed."""
+
+    def _bind(ep: str) -> tuple[int, str, str]:
+        lowered = ep.lower()
+        scheme = "unix"
+        target = ep
+        if lowered.startswith("tcp://"):
+            scheme = "tcp"
+            target = ep[len("tcp://") :]
+        try:
+            result = server.add_insecure_port(target if scheme == "tcp" else ep)
+        except RuntimeError:
+            return (0, scheme, target)
+        return (result, scheme, target)
+
+    result, scheme, target = _bind(endpoint)
+    if result > 0:
+        if scheme == "tcp":
+            host, sep, port = target.rpartition(":")
+            if sep and port == "0":
+                return f"tcp://{host}:{result}"
+            return f"tcp://{target}"
+        return endpoint
+
+    if endpoint.lower().startswith("unix://"):
+        fallback = "tcp://127.0.0.1:0"
+        result, scheme, target = _bind(fallback)
+        if result == 0:
+            raise RuntimeError(
+                f"Unable to bind gRPC server to {endpoint} or TCP fallback {fallback}."
+            )
+        host, sep, _port = target.rpartition(":")
+        resolved = f"tcp://{host}:{result}" if sep else f"tcp://{result}"
+        logging.warning(
+            "Falling back to TCP listener at %s due to unix socket bind failure.", resolved
+        )
+        return resolved
+
+    raise RuntimeError(f"Unable to bind gRPC server to {endpoint}.")
 
 
 async def _serve(config: ServerConfig) -> None:
     _configure_logging(config.log_level)
-    try:
-        socket_path = _prepare_socket(config.socket_path)
-    except PermissionError as exc:
-        logging.error("Failed to prepare unix socket %s: %s", config.socket_path, exc)
-        raise SystemExit(1) from exc
-    if socket_path != config.socket_path:
-        config = replace(config, socket_path=socket_path)
-
+    endpoint = config.socket_endpoint
+    if endpoint.lower().startswith("unix://"):
+        socket_path = Path(endpoint[len("unix://") :])
+        try:
+            prepared = _prepare_socket(socket_path)
+        except PermissionError as exc:
+            logging.error("Failed to prepare unix socket %s: %s", socket_path, exc)
+            raise SystemExit(1) from exc
+        if prepared != socket_path:
+            endpoint = f"unix://{prepared}"
     server = _create_server(config)
+    bound_endpoint = _bind_server(server, endpoint)
+    config = replace(config, socket_endpoint=bound_endpoint)
     await server.start()
-    logging.info("Linux RAG gRPC server listening on unix socket %s", config.socket_path)
+    logging.info("Linux RAG gRPC server listening on %s", config.socket_endpoint)
 
     shutdown_event = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -337,7 +420,8 @@ def serve(argv: Iterable[str] | None = None) -> None:
     args = _parse_args(argv)
     config = _load_config(args.config)
     if args.socket is not None:
-        config = replace(config, socket_path=args.socket)
+        endpoint = _resolve_socket_endpoint(args.socket, DEFAULT_SOCKET_PATH)
+        config = replace(config, socket_endpoint=endpoint)
     asyncio.run(_serve(config))
 
 
