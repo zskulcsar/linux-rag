@@ -15,7 +15,18 @@ def test_server_config_respects_socket_env(monkeypatch, tmp_path) -> None:
         {"runtime": {"socket_path": "${LINUX_RAG_SOCKET}"}}
     )
 
-    assert config.socket_endpoint == f"unix://{socket_path.resolve()}"
+    assert config.socket_endpoint == f"unix:/{socket_path.resolve()}"
+
+
+def test_server_config_env_override_beats_config_value(monkeypatch, tmp_path) -> None:
+    env_socket = tmp_path / "env.sock"
+    monkeypatch.setenv("LINUX_RAG_SOCKET", str(env_socket))
+
+    config = server_main.ServerConfig.from_mapping(
+        {"runtime": {"socket_path": "/tmp/linux-rag/rag-service.sock"}}
+    )
+
+    assert config.socket_endpoint == f"unix:/{env_socket.resolve()}"
 
 
 def test_prepare_socket_retains_configured_path(tmp_path) -> None:

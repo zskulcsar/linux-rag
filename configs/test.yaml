@@ -2,7 +2,8 @@
 runtime:
   # Unix domain socket exposed by the Python gRPC service for CLI clients.
   # Falls back to /run/linux-rag/rag-service.sock when LINUX_RAG_SOCKET is unset.
-  socket_path: ${LINUX_RAG_SOCKET}
+  #socket_path: ${LINUX_RAG_SOCKET}
+  socket_path: /tmp/linux-rag/rag-service.sock
   # Default logging level for services launched via ragman-admin.
   log_level: info
 
@@ -16,17 +17,17 @@ stack:
 
 paths:
   # Root directory for all persisted data managed by the stack.
-  data_root: ./.tmp/linux-rag
+  data_root: ../.tmp/linux-rag
   # SQLite cache database directory (must live under data_root).
-  cache_dir: ./.tmp/linux-rag/cache
+  cache_dir: ../.tmp/linux-rag/cache
   # Location where Weaviate stores indexes and vector payloads.
-  weaviate_data_dir: ./.tmp/linux-rag/weaviate
+  weaviate_data_dir: ../.tmp/linux-rag/weaviate
   # Directory mounted into Ollama for downloaded model artifacts.
-  ollama_models_dir: ./.tmp/linux-rag/ollama
+  ollama_models_dir: ../.tmp/linux-rag/ollama
   # Directory used to store downloaded Kiwix archives before ingestion.
-  kiwix_archives_dir: ./.tmp/linux-rag/kiwix
+  kiwix_archives_dir: ../.tmp/linux-rag/kiwix
   # Optional log directory for stack services.
-  logs_dir: ./.tmp/linux-rag/logs
+  logs_dir: ../.tmp/linux-rag/logs
 
 services:
   weaviate:
@@ -44,7 +45,7 @@ ingestion:
   # Default man page root scanned during initial ingestion.
   manpage_root: /usr/share/man
   # Local directory where extracted wiki content is staged.
-  wiki_extract_dir: /var/lib/linux-rag/kiwix/extracted
+  wiki_extract_dir: ../tmp/linux-rag/kiwix/extracted
   # Suggested Kiwix archives to fetch on first run; can be overridden by CLI flags.
   default_wiki_archives:
     - gemma-essential

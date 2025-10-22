@@ -224,8 +224,8 @@ go-audit-fix:
 	fi
 
 stack-up:
-	cd $(GO_ROOT) && PYTHONPATH=$(shell pwd) LINUX_RAG_SOCKET="${XDG_RUNTIME_DIR:-/.tmp}/linux-rag/rag-service.sock" \
-	go run ./cmd/ragman-admin run --config /home/zsoltk/git/linux-rag/configs/test.yaml --wait-ready
+	cd $(GO_ROOT) && PYTHONPATH=$(shell pwd) LINUX_RAG_SOCKET=/tmp/linux-rag/rag-service.sock \
+	go run ./cmd/ragman-admin run --config $(shell pwd)/configs/test.yaml --wait-ready
 
 stack-down:
 	cd infra && podman-compose down --remove-orphans --timeout 30

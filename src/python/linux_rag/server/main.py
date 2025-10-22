@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover - will be caught during runtime bootstra
 
 DEFAULT_CONFIG_PATH = Path("configs/local.yaml")
 DEFAULT_SOCKET_PATH = Path("/run/linux-rag/rag-service.sock")
-DEFAULT_SOCKET_ENDPOINT = f"unix://{DEFAULT_SOCKET_PATH}"
+DEFAULT_SOCKET_ENDPOINT = f"unix:/{DEFAULT_SOCKET_PATH}"
 DEFAULT_LOG_LEVEL = "info"
 CACHE_BUDGET_BYTES = 1_073_741_824
 
@@ -56,7 +56,9 @@ class ServerConfig:
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "ServerConfig":
         runtime = data.get("runtime", {}) if isinstance(data, dict) else {}
-        socket_endpoint = _resolve_socket_endpoint(runtime.get("socket_path"), DEFAULT_SOCKET_PATH)
+        env_socket = os.environ.get("LINUX_RAG_SOCKET", "").strip()
+        socket_candidate = env_socket or runtime.get("socket_path")
+        socket_endpoint = _resolve_socket_endpoint(socket_candidate, DEFAULT_SOCKET_PATH)
         log_level = str(runtime.get("log_level", DEFAULT_LOG_LEVEL)).lower()
         paths_cfg = data.get("paths", {}) if isinstance(data, dict) else {}
         data_root = _resolve_path_value(paths_cfg.get("data_root"), Path("/var/lib/linux-rag"))
@@ -109,22 +111,22 @@ def _resolve_socket_endpoint(value: Any, default: Path) -> str:
         text = str(value).strip()
 
     if not text:
-        return f"unix://{default}"
+        return f"unix:/{default}"
 
     expanded = os.path.expandvars(text)
     expanded = os.path.expanduser(expanded)
     if not expanded:
-        return f"unix://{default}"
+        return f"unix:/{default}"
 
     lowered = expanded.lower()
     if lowered.startswith("tcp://"):
         return expanded
-    if lowered.startswith("unix://"):
-        socket_path = Path(expanded[len("unix://") :])
-        return f"unix://{socket_path.expanduser().resolve()}"
+    if lowered.startswith("unix:/"):
+        socket_path = Path(expanded[len("unix:/") :])
+        return f"unix:/{socket_path.expanduser().resolve()}"
 
     socket_path = Path(expanded)
-    return f"unix://{socket_path.expanduser().resolve()}"
+    return f"unix:/{socket_path.expanduser().resolve()}"
 
 
 def _resolve_path_value(value: Any, default: Path) -> Path:
@@ -359,7 +361,7 @@ def _bind_server(server: Server, endpoint: str) -> str:
             return f"tcp://{target}"
         return endpoint
 
-    if endpoint.lower().startswith("unix://"):
+    if endpoint.lower().startswith("unix:/"):
         fallback = "tcp://127.0.0.1:0"
         result, scheme, target = _bind(fallback)
         if result == 0:
@@ -379,15 +381,15 @@ def _bind_server(server: Server, endpoint: str) -> str:
 async def _serve(config: ServerConfig) -> None:
     _configure_logging(config.log_level)
     endpoint = config.socket_endpoint
-    if endpoint.lower().startswith("unix://"):
-        socket_path = Path(endpoint[len("unix://") :])
+    if endpoint.lower().startswith("unix:/"):
+        socket_path = Path(endpoint[len("unix:/") :])
         try:
             prepared = _prepare_socket(socket_path)
         except PermissionError as exc:
             logging.error("Failed to prepare unix socket %s: %s", socket_path, exc)
             raise SystemExit(1) from exc
         if prepared != socket_path:
-            endpoint = f"unix://{prepared}"
+            endpoint = f"unix:/{prepared}"
     server = _create_server(config)
     bound_endpoint = _bind_server(server, endpoint)
     config = replace(config, socket_endpoint=bound_endpoint)

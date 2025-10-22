@@ -126,6 +126,8 @@ class AdminHandler:
     async def run_ingestion(self, request, context) -> Any:
         """Handle RunIngestion RPC calls."""
 
+        self._logger.info(f"Ingestion started with {request}")
+
         job_id = self._job_store.start_job(
             IngestionJobType.MANUAL_REFRESH,
             started_at=self._clock(),
@@ -136,26 +138,35 @@ class AdminHandler:
         error_details: list[_ErrorDetails] = []
 
         try:
+            # TODO: check the code why self._man_ingestor is not initialized
             if request.refresh_man_pages and self._man_ingestor and self._manpage_root:
+                self._logger.info(f"Refreshing man pages")
                 man_result = await asyncio.to_thread(
                     self._man_ingestor.ingest,
                     self._manpage_root,
                     refresh=True,
                 )
                 man_pages_processed = man_result.processed_count
+                self._logger.info(f"Ingestion of man pages completed. "
+                                  + f"{man_pages_processed} man pages processed.")
                 error_details.extend(self._normalize_errors(man_result.errors))
 
             archive_ids = list(request.wiki_archive_ids) or list(self._default_wiki_archives)
             if archive_ids and self._wiki_ingestor:
+                self._logger.info(f"Ingesting wiki pages")
                 wiki_result = await asyncio.to_thread(
                     self._wiki_ingestor.ingest_archives,
                     archive_ids,
                     refresh=True,
                 )
                 wiki_articles_processed = wiki_result.total_articles
+                self._logger.info(f"Ingestion of wiki pages completed; "
+                                  + f"{wiki_articles_processed} wiki articles processed.")
                 error_details.extend(self._normalize_errors(wiki_result.errors))
 
             for err in error_details:
+                self._logger.info(f"Encountered error during ingestion. "
+                                  + f"Error: {err.message}, Source: {err.source}.")
                 self._job_store.record_error(
                     job_id,
                     message=err.message,
@@ -170,20 +181,28 @@ class AdminHandler:
                 wiki_articles_processed=wiki_articles_processed,
                 completed_at=completed_at,
             )
+            self._logger.info(f"Ingestion job completed at {completed_at}")
+
             if self._schedule_store is not None:
                 self._schedule_store.update(last_success_at=completed_at)
+                self._logger.info(f"Updated store schedule")
 
             response = rag_service_pb2.RunIngestionResponse(  # type: ignore[attr-defined]
                 job_id=str(job_id),
                 man_pages_processed=man_pages_processed,
                 wiki_articles_processed=wiki_articles_processed,
             )
+            self._logger.info(f"Created ingestion response")
+
             for err in error_details:
+                self._logger.info(f"Encountered error during ingestion response creation. "
+                                  + f"Error: {err.message}, Source: {err.source}")
                 response.errors.add(
                     source=err.source or "unknown",
                     error_message=err.message,
                 )
             return response
+
         except Exception as exc:  # pragma: no cover - defensive logging
             failed_at = self._clock()
             self._job_store.fail_job(

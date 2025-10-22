@@ -15,6 +15,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 GO_ROOT = REPO_ROOT / "src" / "go"
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "test.yaml"
+TIMEOUT=10
 
 pytestmark = pytest.mark.integration
 
@@ -27,7 +28,7 @@ def _ensure_go_env() -> dict[str, str]:
     go_mod_cache.mkdir(exist_ok=True)
     env.setdefault("GOCACHE", str(go_cache))
     env.setdefault("GOMODCACHE", str(go_mod_cache))
-    #env.setdefault("LINUX_RAG_SKIP_STACK", "1")
+    env.setdefault("LINUX_RAG_SKIP_STACK", "1")
     uv_cache = REPO_ROOT / ".uv-cache"
     uv_cache.mkdir(exist_ok=True)
     env.setdefault("UV_CACHE_DIR", str(uv_cache))
@@ -46,7 +47,7 @@ def _run_admin_cli(*args: str) -> subprocess.CompletedProcess[str]:
         cwd=GO_ROOT,
         capture_output=True,
         text=True,
-        timeout=20,
+        timeout=TIMEOUT,
         env=_ensure_go_env(),
     )
 
@@ -54,7 +55,8 @@ def _run_admin_cli(*args: str) -> subprocess.CompletedProcess[str]:
 def test_ragman_admin_run_ingest_status_workflow() -> None:
     """Expect ragman-admin run -> ingest -> status to succeed and surface schedule metadata."""
     probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    probe_path = Path(tempfile.gettempdir()) / f"linux-rag-probe-{uuid4().hex}.sock"
+    #probe_path = Path(tempfile.gettempdir()) / f"linux-rag-probe-{uuid4().hex}.sock"
+    probe_path = Path("/tmp/linux-rag/rag-service.sock")
     try:
         probe.bind(str(probe_path))
     except OSError:

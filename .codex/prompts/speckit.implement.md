@@ -92,38 +92,48 @@ You **MUST** use the configured MCP servers. use context7.
    - **Execution flow**: Order and dependency requirements
 
 6. Check the existence of tools and development dependencies
-   - **Check** Check if the `dependencies.md` file under `specs/FEATURE_DIR` is present. If there is use the tools and dependencies listed for the task respect them.
+   - **Check** Check if the `dependencies.md` file under `specs/FEATURE_DIR` is present. If the file is present use the tools and dependencies listed for the task unless something else is required.
    - **Verify** Verify if the tool or development dependency exist on the system. If the `dependencies.md` is listing different status for the tool than the verified status, update the file.
-   - **Report** Report the tools and their statuses as follows:
-
-## Tooling requirement report
-
-| Task ID | Required tool/dependency | Status | Installation command |
-|---------|--------------------------|--------|----------------------|
-
-   - **If any tools or development dependencies aremissing**:
+   - **Report** create a tool report table:
+     ```
+     | Task ID | Required tool/dependency | Status | Installation command |
+     |---------|--------------------------|--------|----------------------|
+     | T001    | gcc                      | Not available | sudo apt install gcc |
+     | T001    | uv                       | Present | N/A |
+     | T002    | go                       | Present | N/A |
+     ```
+   - **If any tools or development dependencies are missing**:
      * Display the table with incomplete item counts
-     * **STOP** and inform the user: "Some dependencies are missing. Please install them before running `/implement` again."
-     * Abort the exection
+     * **STOP** and inform the user: "Some dependencies are missing. Please install them before running `/implement` again." and abort the exection
    - **If all tools and development dependencies are present proceed to next step.**
-   - Output the report at this point only.
 
+7. Plan the implementation:
+   - **Phase-by-phase planning**: List each phase before
+   - **Respect dependencies**: Plan sequential tasks in order, parallel tasks [P] can run together
+   - **Follow TDD approach**: Plan test tasks before their corresponding implementation tasks
+   - **File-based coordination**: Tasks affecting the same files must be planned sequentially
+   - **Validation checkpoints**: Plan verification for each phase completion before proceeding
+   - Report the plan outlining each steps with a short description of the planned changes.
+     * **STOP** and ask: "Do you want to proceed with implementation as outlined above? (yes/no)"
+     * Wait for user response before continuing
+     * If user says "no" or "wait" or "stop", halt execution.
+     * If user says "yes" or "proceed" or "continue", proceed to step 8
 
-7. Execute implementation following the task plan:
+8. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
    - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
-8. Implementation execution rules:
+9. Implementation execution rules:
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
    - **Integration work**: Database connections, middleware, logging, external services
    - **Polish and validation**: Unit tests, performance optimization, documentation
 
-9. Progress tracking and error handling:
+10. Progress tracking and error handling:
    - Report progress after each completed task
    - Halt execution if any non-parallel task fails
    - For parallel tasks [P], continue with successful tasks, report failed ones
@@ -131,7 +141,7 @@ You **MUST** use the configured MCP servers. use context7.
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
-10. Completion validation:
+11. Completion validation:
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
