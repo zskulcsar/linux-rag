@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -90,6 +91,7 @@ class IngestionJobStore:
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        self._logger = logging.getLogger(__name__)
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
@@ -142,6 +144,10 @@ class IngestionJobStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ingestion_job_errors_job_id ON ingestion_job_errors (job_id);"
             )
+        self._logger.debug(
+            "IngestionJobStore._ensure_schema(): Ensured ingestion job schema at %s",
+            self._db_path,
+        )
 
     def start_job(
         self,
@@ -177,6 +183,11 @@ class IngestionJobStore:
                     timestamp,
                 ),
             )
+        self._logger.debug(
+            "IngestionJobStore.start_job(job_type, job_id, started_at): Started ingestion job job_id=%s job_type=%s",
+            job_uuid,
+            job_type,
+        )
         return job_uuid
 
     def record_error(
@@ -215,6 +226,12 @@ class IngestionJobStore:
                 "UPDATE ingestion_jobs SET updated_at = ? WHERE id = ?;",
                 (created_serialized, job_key),
             )
+        self._logger.debug(
+            "IngestionJobStore.record_error(job_id, message, source, created_at): Recorded ingestion error job_id=%s source=%s message=%s",
+            job_key,
+            src,
+            msg,
+        )
 
     def complete_job(
         self,
@@ -294,6 +311,14 @@ class IngestionJobStore:
             )
             if cursor.rowcount == 0:
                 raise KeyError(f"ingestion job not found: {job_key}")
+        self._logger.debug(
+            "IngestionJobStore._finalize_job(job_id, status, man_pages_processed, wiki_articles_processed, completed_at): Finalized job job_id=%s status=%s man_pages=%s wiki_pages=%s completed_at=%s",
+            job_key,
+            status,
+            man_pages_processed,
+            wiki_articles_processed,
+            serialized_time,
+        )
 
     def get_job(self, job_id: UUID | str) -> IngestionJobRecord | None:
         """Retrieve a job and its errors."""
@@ -318,7 +343,11 @@ class IngestionJobStore:
             if row is None:
                 return None
             errors = self._fetch_errors(conn, job_key)
-        return self._row_to_job(row, errors)
+        job = self._row_to_job(row, errors)
+        self._logger.debug(
+            "IngestionJobStore.get_job(job_id): Retrieved job job_id=%s", job.job_id
+        )
+        return job
 
     def latest_job(self) -> IngestionJobRecord | None:
         """Return the most recently started job."""
@@ -342,7 +371,11 @@ class IngestionJobStore:
             if row is None:
                 return None
             errors = self._fetch_errors(conn, row["id"])
-        return self._row_to_job(row, errors)
+        job = self._row_to_job(row, errors)
+        self._logger.debug(
+            "IngestionJobStore.latest_job(): Retrieved latest job job_id=%s", job.job_id
+        )
+        return job
 
     def last_successful_job(self) -> IngestionJobRecord | None:
         """Return the most recently completed successful job."""
@@ -376,7 +409,13 @@ class IngestionJobStore:
             if row is None:
                 return None
             errors = self._fetch_errors(conn, row["id"])
-        return self._row_to_job(row, errors)
+        job = self._row_to_job(row, errors)
+        self._logger.debug(
+            "IngestionJobStore._job_by_status(status): Retrieved job by status=%s job_id=%s",
+            status,
+            job.job_id,
+        )
+        return job
 
     def refresh_history(self) -> RefreshHistory:
         """Return aggregated refresh metrics."""
@@ -384,11 +423,18 @@ class IngestionJobStore:
         latest = self.latest_job()
         last_success = self.last_successful_job()
         last_failure = self.last_failed_job()
-        return RefreshHistory(
+        history = RefreshHistory(
             latest_job=latest,
             last_success_at=last_success.completed_at if last_success else None,
             last_failure_at=last_failure.completed_at if last_failure else None,
         )
+        self._logger.debug(
+            "IngestionJobStore.refresh_history(): Refresh history computed latest=%s last_success=%s last_failure=%s",
+            getattr(latest, "job_id", None),
+            getattr(last_success, "completed_at", None),
+            getattr(last_failure, "completed_at", None),
+        )
+        return history
 
     def list_recent_jobs(
         self,
@@ -426,6 +472,12 @@ class IngestionJobStore:
             for row in rows:
                 errors = self._fetch_errors(conn, row["id"])
                 jobs.append(self._row_to_job(row, errors))
+        self._logger.debug(
+            "IngestionJobStore.list_recent_jobs(limit, statuses): Listed recent jobs count=%s limit=%s statuses=%s",
+            len(jobs),
+            limit,
+            statuses,
+        )
         return jobs
 
     def _fetch_errors(
@@ -449,6 +501,11 @@ class IngestionJobStore:
                     created_at=_parse_datetime(created_at) or datetime.now(UTC),
                 )
             )
+        self._logger.debug(
+            "IngestionJobStore._fetch_errors(conn, job_key): Fetched %s errors for job_id=%s",
+            len(records),
+            job_key,
+        )
         return tuple(records)
 
     def _row_to_job(
@@ -456,7 +513,7 @@ class IngestionJobStore:
         row: sqlite3.Row,
         errors: Iterable[IngestionErrorRecord],
     ) -> IngestionJobRecord:
-        return IngestionJobRecord(
+        job = IngestionJobRecord(
             job_id=_parse_uuid(row["id"]),
             job_type=IngestionJobType(row["job_type"]),
             status=IngestionJobStatus(row["status"]),
@@ -466,6 +523,13 @@ class IngestionJobStore:
             wiki_articles_processed=int(row["wiki_articles_processed"]),
             errors=tuple(errors),
         )
+        self._logger.debug(
+            "IngestionJobStore._row_to_job(row, errors): Constructed IngestionJobRecord job_id=%s status=%s error_count=%s",
+            job.job_id,
+            job.status,
+            len(job.errors),
+        )
+        return job
 
 
 __all__ = [

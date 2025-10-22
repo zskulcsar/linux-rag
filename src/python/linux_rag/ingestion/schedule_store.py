@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -62,6 +63,7 @@ class ScheduleStore:
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        self._logger = logging.getLogger(__name__)
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
@@ -95,6 +97,10 @@ class ScheduleStore:
                 """,
                 (_serialize_datetime(_utcnow()),),
             )
+        self._logger.debug(
+            "ScheduleStore._ensure_schema(): Ensured schedule store schema at %s",
+            self._db_path,
+        )
 
     def load(self) -> ScheduleState:
         """Fetch the persisted scheduler state."""
@@ -107,11 +113,18 @@ class ScheduleStore:
             if row is None:
                 return ScheduleState(cadence=None, next_run_at=None, last_success_at=None)
             cadence, next_run, last_success = row
-            return ScheduleState(
+            state = ScheduleState(
                 cadence=_parse_timedelta(cadence),
                 next_run_at=_parse_datetime(next_run),
                 last_success_at=_parse_datetime(last_success),
             )
+            self._logger.debug(
+                "ScheduleStore.load(): Loaded schedule state cadence=%s next_run=%s last_success=%s",
+                state.cadence,
+                state.next_run_at,
+                state.last_success_at,
+            )
+            return state
 
     def update(
         self,
@@ -146,6 +159,12 @@ class ScheduleStore:
                     _serialize_datetime(_utcnow()),
                 ),
             )
+        self._logger.debug(
+            "ScheduleStore.update(cadence, next_run_at, last_success_at): Updated schedule cadence=%s next_run_at=%s last_success_at=%s",
+            cadence,
+            next_run_at,
+            last_success_at,
+        )
 
 
 __all__ = ["ScheduleState", "ScheduleStore"]

@@ -80,6 +80,13 @@ class ManPageIngestor:
         if not root.is_dir():
             raise ManPageIngestionError(f"man page root must be a directory: {root}")
 
+        self._logger.debug(
+            "ManPageIngestor.ingest(man_root, refresh, include_sections): Starting ingestion root=%s refresh=%s include_sections=%s",
+            root,
+            refresh,
+            include_sections,
+        )
+
         if refresh and self._output_dir.exists():
             try:
                 shutil.rmtree(self._output_dir)
@@ -110,7 +117,10 @@ class ManPageIngestor:
             except Exception as exc:
                 message = f"{relative}: failed to read man page: {exc}"
                 errors.append(message)
-                self._logger.warning(message)
+                self._logger.warning(
+                    "ManPageIngestor.ingest(man_root, refresh, include_sections): %s",
+                    message,
+                )
                 continue
 
             normalized_text = self._normalize_text(text)
@@ -126,9 +136,13 @@ class ManPageIngestor:
                     if existing_checksum == checksum:
                         should_write = False
                         skipped += 1
+                        self._logger.debug(
+                            "ManPageIngestor.ingest(man_root, refresh, include_sections): Skipping unchanged man page %s",
+                            target_file,
+                        )
                 except Exception as exc:  # pragma: no cover - defensive logging
                     self._logger.debug(
-                        "Failed to read existing man page copy %s: %s",
+                        "ManPageIngestor.ingest(man_root, refresh, include_sections): Failed to read existing man page copy %s: %s",
                         target_file,
                         exc,
                     )
@@ -136,10 +150,17 @@ class ManPageIngestor:
             if should_write:
                 try:
                     target_file.write_text(normalized_text, encoding="utf-8")
+                    self._logger.debug(
+                        "ManPageIngestor.ingest(man_root, refresh, include_sections): Wrote normalized man page to %s",
+                        target_file,
+                    )
                 except OSError as exc:
                     message = f"{relative}: failed to persist normalized content: {exc}"
                     errors.append(message)
-                    self._logger.error(message)
+                    self._logger.error(
+                        "ManPageIngestor.ingest(man_root, refresh, include_sections): %s",
+                        message,
+                    )
                     continue
 
             timestamp = self._clock()
@@ -160,6 +181,12 @@ class ManPageIngestor:
             processed_count=len(sources),
             skipped_count=skipped,
             errors=errors,
+        )
+        self._logger.debug(
+            "ManPageIngestor.ingest(man_root, refresh, include_sections): Completed ingestion processed=%s skipped=%s errors=%s",
+            len(sources),
+            skipped,
+            len(errors),
         )
 
     def _discover_man_pages(self, root: Path) -> Iterable[Path]:

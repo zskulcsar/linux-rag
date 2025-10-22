@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Iterable, Tuple
 
@@ -44,6 +45,7 @@ class RetrievalPipeline:
         self._embedder = embedder
         self._vector_store = vector_store
         self._reranker = reranker
+        self._logger = logging.getLogger(__name__)
 
     async def retrieve(
         self,
@@ -63,10 +65,21 @@ class RetrievalPipeline:
             raise ValueError("limit must be greater than zero.")
 
         hints_tuple = self._normalize_hints(context_hints)
+        self._logger.debug(
+            "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Called with query=%s limit=%s filters=%s hints=%s",
+            normalized_query,
+            limit,
+            filters,
+            hints_tuple,
+        )
 
         try:
             embedding = await self._embedder.embed(normalized_query, hints=hints_tuple)
         except Exception as exc:  # pragma: no cover - defensive logging hook
+            self._logger.exception(
+                "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Embedding failed for query=%s",
+                normalized_query,
+            )
             raise RetrievalError(f"failed to compute embeddings: {exc}") from exc
 
         try:
@@ -76,9 +89,18 @@ class RetrievalPipeline:
                 filters=filters,
             )
         except Exception as exc:
+            self._logger.exception(
+                "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Vector store query failed for query=%s",
+                normalized_query,
+            )
             raise RetrievalError(f"vector search failed: {exc}") from exc
 
         candidates = [self._to_candidate(hit) for hit in hits]
+        self._logger.debug(
+            "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Vector store returned %s candidates before rerank for query=%s",
+            len(candidates),
+            normalized_query,
+        )
         if not candidates:
             return RetrievalResult(
                 query=normalized_query,
@@ -93,9 +115,19 @@ class RetrievalPipeline:
                 hits=candidates,
             )
         except Exception as exc:
+            self._logger.exception(
+                "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Reranker failed for query=%s",
+                normalized_query,
+            )
             raise RetrievalError(f"reranker failed: {exc}") from exc
 
         limited = list(reranked[:limit])
+        self._logger.debug(
+            "RetrievalPipeline.retrieve(query, context_hints, limit, filters): Returning %s reranked candidates for query=%s (limit=%s)",
+            len(limited),
+            normalized_query,
+            limit,
+        )
         return RetrievalResult(
             query=normalized_query,
             hints=hints_tuple,
@@ -111,6 +143,11 @@ class RetrievalPipeline:
             value = hint.strip()
             if value:
                 normalized.append(value)
+        self._logger.debug(
+            "RetrievalPipeline._normalize_hints(hints): Normalized context hints=%s -> %s",
+            hints,
+            tuple(normalized),
+        )
         return tuple(normalized)
 
     def _to_candidate(self, hit: object) -> RetrievalCandidate:
@@ -130,12 +167,24 @@ class RetrievalPipeline:
         metadata = _get("metadata")
 
         if not document_id or not title or not source_path:
+            self._logger.debug(
+                "RetrievalPipeline._to_candidate(hit): Invalid candidate encountered document_id=%s title=%s source_path=%s",
+                document_id,
+                title,
+                source_path,
+            )
             raise RetrievalError("retrieval hit missing required fields.")
 
         if metadata is not None and not isinstance(metadata, dict):
             # Preserve metadata only when it is already a dictionary.
             metadata = None
 
+        self._logger.debug(
+            "RetrievalPipeline._to_candidate(hit): Constructed RetrievalCandidate id=%s score=%.4f metadata_keys=%s",
+            document_id,
+            score,
+            sorted(metadata.keys()) if metadata else None,
+        )
         return RetrievalCandidate(
             document_id=document_id,
             title=title,

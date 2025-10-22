@@ -6,6 +6,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from typing import Any, MutableMapping, Tuple, NoReturn
+import logging
 
 import grpc  # type: ignore[import-untyped]
 
@@ -15,6 +16,8 @@ from linux_rag.retrieval.pipeline import RetrievalPipeline, RetrievalResult
 
 
 CacheKey = Tuple[str, Tuple[str, ...], str]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -66,6 +69,12 @@ class AskHandler:
         allow_cache = request.allow_cache
 
         if allow_cache:
+            logger.debug(
+                "AskHandler.handle(request, context): Cache lookup for query=%s hints=%s model=%s",
+                query,
+                hints,
+                model,
+            )
             cached = self._cache.get(cache_key)
             if cached:
                 cached.last_accessed_ms = _now_ms()
@@ -73,9 +82,28 @@ class AskHandler:
                 cached_hit.CopyFrom(cached.response)
                 cached_hit.cache_hit = True
                 cached_hit.response_time_ms = 0
+                logger.debug(
+                    "AskHandler.handle(request, context): Returning cached Ask response query=%s hints=%s model=%s age_ms=%s",
+                    query,
+                    hints,
+                    model,
+                    _now_ms() - cached.stored_at_ms,
+                )
                 return cached_hit
 
+        logger.debug(
+            "AskHandler.handle(request, context): Executing retrieval for query=%s hints=%s model=%s allow_cache=%s",
+            query,
+            hints,
+            model,
+            allow_cache,
+        )
         retrieval_result = await self._run_retrieval(query, hints, context=context)
+        logger.debug(
+            "AskHandler.handle(request, context): Retrieval completed query=%s candidate_count=%s",
+            retrieval_result.query,
+            len(retrieval_result.candidates),
+        )
 
         start_ns = time.perf_counter_ns()
 
@@ -88,6 +116,12 @@ class AskHandler:
         )
 
         elapsed_ms = int((time.perf_counter_ns() - start_ns) / 1_000_000)
+        logger.debug(
+            "AskHandler.handle(request, context): LLM synthesis completed in %s ms for session query=%s model=%s",
+            elapsed_ms,
+            query,
+            model or answer_response.model,
+        )
 
         response = self._build_proto_response(
             answer_response,
@@ -102,6 +136,13 @@ class AskHandler:
                 response=stored_response,
                 stored_at_ms=_now_ms(),
                 last_accessed_ms=_now_ms(),
+            )
+            logger.debug(
+                "AskHandler.handle(request, context): Stored response in cache query=%s hints=%s model=%s cache_size=%s",
+                query,
+                hints,
+                model,
+                len(self._cache),
             )
 
         return response
@@ -126,6 +167,13 @@ class AskHandler:
         session_id = str(uuid.uuid4())
         response_time_ms = answer_response.latency_ms or elapsed_ms
 
+        logger.debug(
+            "AskHandler._build_proto_response(answer_response, elapsed_ms, cache_hit): Building AskResponse session_id=%s cache_hit=%s response_time_ms=%s citations=%s",
+            session_id,
+            cache_hit,
+            response_time_ms,
+            len(citations),
+        )
         return rag_service_pb2.AskResponse(  # type: ignore[attr-defined]
             session_id=session_id,
             answer_text=answer_response.answer,
@@ -141,11 +189,22 @@ class AskHandler:
         *,
         context: grpc.aio.ServicerContext | None,
     ) -> RetrievalResult:
+        logger.debug(
+            "AskHandler._run_retrieval(query, hints, context): Running retrieval pipeline query=%s hints=%s",
+            query,
+            hints,
+        )
         try:
-            return await self._pipeline.retrieve(
+            result = await self._pipeline.retrieve(
                 query,
                 context_hints=hints,
             )
+            logger.debug(
+                "AskHandler._run_retrieval(query, hints, context): Retrieval pipeline succeeded query=%s candidates=%s",
+                result.query,
+                len(result.candidates),
+            )
+            return result
         except Exception as exc:  # pragma: no cover - will be surfaced upstream
             message = f"retrieval failed: {exc}"
             await self._abort(context, grpc.StatusCode.INTERNAL, message)
@@ -159,12 +218,25 @@ class AskHandler:
         model: str | None,
         context: grpc.aio.ServicerContext | None,
     ):
+        logger.debug(
+            "AskHandler._synthesize_answer(query, hints, retrieval, model, context): Synthesizing answer query=%s hints=%s model=%s candidate_count=%s",
+            query,
+            hints,
+            model,
+            len(retrieval.candidates),
+        )
         try:
-            return await self._builder.build_answer(
+            answer = await self._builder.build_answer(
                 query=query,
                 candidates=retrieval.candidates,
                 model=model,
             )
+            logger.debug(
+                "Answer synthesis succeeded: model=%s latency_ms=%s",
+                answer.model,
+                answer.latency_ms,
+            )
+            return answer
         except ResponseBuilderError as exc:
             message = f"failed to synthesize answer: {exc}"
             await self._abort(context, grpc.StatusCode.INTERNAL, message)
@@ -175,6 +247,11 @@ class AskHandler:
         status: grpc.StatusCode,
         message: str,
     ) -> NoReturn:
+        logger.debug(
+            "AskHandler._abort(context, status, message): Aborting Ask request with status=%s message=%s",
+            status,
+            message,
+        )
         if context is not None:
             await context.abort(status, message)
         raise grpc.RpcError(message)  # pragma: no cover - fallback if context missing

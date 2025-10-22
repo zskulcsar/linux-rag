@@ -291,14 +291,17 @@ class StackLifecycleController:
         args = (*self._settings.command_prefix(compose_path), "up", "--detach")
         env = self._build_environment(compose_path, env_overrides)
 
-        self._logger.debug("Starting stack with command: %s", " ".join(args))
+        self._logger.debug(
+            "StackLifecycleController.start(compose_file, wait_ready, readiness_probe, env_overrides, timeout): Starting stack with command: %s",
+            " ".join(args),
+        )
         result = await self._run(args, env)
 
         if wait_ready:
             probe = readiness_probe or self._default_probe
             if probe is None:
                 self._logger.warning(
-                    "wait_ready requested but no readiness probe provided."
+                    "StackLifecycleController.start(...): wait_ready requested but no readiness probe provided."
                 )
             else:
                 await self._wait_for_ready(
@@ -320,7 +323,10 @@ class StackLifecycleController:
         args = (*self._settings.command_prefix(compose_path), "down", "--remove-orphans")
         env = self._build_environment(compose_path, env_overrides)
 
-        self._logger.debug("Stopping stack with command: %s", " ".join(args))
+        self._logger.debug(
+            "StackLifecycleController.stop(compose_file, env_overrides): Stopping stack with command: %s",
+            " ".join(args),
+        )
         return await self._run(args, env)
 
     async def restart(
@@ -336,7 +342,8 @@ class StackLifecycleController:
             await self.stop(compose_file=compose_file, env_overrides=env_overrides)
         except StackControlError as exc:
             self._logger.warning(
-                "Failed to stop stack before restart: %s", exc
+                "StackLifecycleController.restart(...): Failed to stop stack before restart: %s",
+                exc,
             )
 
         return await self.start(
@@ -388,25 +395,49 @@ class StackLifecycleController:
                 raise StackControlError(
                     f"Unable to create required directory '{path}': {exc}"
                 ) from exc
+            else:
+                self._logger.debug(
+                    "StackLifecycleController._ensure_directories(): Ensured directory exists: %s",
+                    path,
+                )
 
     def _resolve_compose_path(
         self,
         override: str | Path | None,
     ) -> Path:
         if override is None:
-            return self._settings.compose_file
+            resolved = self._settings.compose_file
+            self._logger.debug(
+                "StackLifecycleController._resolve_compose_path(override): Using default compose file %s",
+                resolved,
+            )
+            return resolved
         path = Path(override)
         if not path.is_absolute():
             path = (self._settings.compose_dir / path).resolve()
-        return _ensure_path(path)
+        resolved = _ensure_path(path)
+        self._logger.debug(
+            "StackLifecycleController._resolve_compose_path(override): Resolved compose override %s -> %s",
+            override,
+            resolved,
+        )
+        return resolved
 
     def _validate_compose_file(self, path: Path, *, must_exist: bool = True) -> None:
         if not must_exist and not path.exists():
+            self._logger.debug(
+                "StackLifecycleController._validate_compose_file(path, must_exist): Compose file optional and not present: %s",
+                path,
+            )
             return
         if not path.exists():
             raise StackControlError(f"Compose file not found: {path}")
         if not path.is_file():
             raise StackControlError(f"Compose file is not a regular file: {path}")
+        self._logger.debug(
+            "StackLifecycleController._validate_compose_file(path, must_exist): Validated compose file at %s",
+            path,
+        )
 
     def _build_environment(
         self,
@@ -420,6 +451,10 @@ class StackLifecycleController:
         env.update(self._settings.extra_env)
         if overrides:
             env.update({str(key): str(value) for key, value in overrides.items()})
+        self._logger.debug(
+            "StackLifecycleController._build_environment(compose_file, overrides): Built environment overrides keys=%s",
+            sorted(env.keys()),
+        )
         return env
 
     async def _wait_for_ready(self, *, probe: Probe, timeout: float) -> None:
@@ -431,12 +466,19 @@ class StackLifecycleController:
             except Exception as exc:  # pragma: no cover - probe-specific errors
                 raise StackControlError(f"Readiness probe failed: {exc}") from exc
             if ready:
+                self._logger.debug(
+                    "StackLifecycleController._wait_for_ready(probe, timeout): Readiness probe signalled ready"
+                )
                 return
             remaining = deadline - loop.time()
             if remaining <= 0:
                 raise StackControlError(
                     f"Stack readiness check timed out after {timeout:.0f}s."
                 )
+            self._logger.debug(
+                "StackLifecycleController._wait_for_ready(probe, timeout): Readiness probe not ready; sleeping remaining=%s",
+                remaining,
+            )
             await asyncio.sleep(min(1.0, remaining))
 
     async def _run(
@@ -449,4 +491,10 @@ class StackLifecycleController:
             raise StackControlError(
                 f"{args[0]} command failed (exit {result.returncode}): {result.stderr or result.stdout}"
             )
+        self._logger.debug(
+            "StackLifecycleController._run(args, env): Lifecycle command succeeded returncode=%s stdout_len=%s stderr_len=%s",
+            result.returncode,
+            len(result.stdout or ""),
+            len(result.stderr or ""),
+        )
         return result

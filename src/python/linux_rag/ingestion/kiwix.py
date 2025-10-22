@@ -168,6 +168,12 @@ class KiwixArchiveIngestor:
     ) -> KiwixIngestionResult:
         """Fetch and register each requested archive."""
 
+        archive_ids = list(archive_ids)
+        self._logger.debug(
+            "KiwixArchiveIngestor.ingest_archives(archive_ids, refresh): Starting ingestion archive_ids=%s refresh=%s",
+            archive_ids,
+            refresh,
+        )
         self._ensure_directories()
 
         imported: list[ArchiveImportResult] = []
@@ -176,24 +182,42 @@ class KiwixArchiveIngestor:
         total_articles = 0
 
         for archive_id in archive_ids:
+            self._logger.debug(
+                "KiwixArchiveIngestor.ingest_archives(archive_ids, refresh): Processing archive_id=%s",
+                archive_id,
+            )
             try:
                 metadata = self._catalog_resolver(archive_id)
             except Exception as exc:
                 message = f"{archive_id}: failed to resolve catalog metadata: {exc}"
                 errors.append(message)
-                self._logger.error(message)
+                self._logger.error(
+                    "KiwixArchiveIngestor.ingest_archives(archive_ids, refresh): %s",
+                    message,
+                )
                 continue
 
             try:
                 result = self._process_archive(metadata, refresh=refresh)
             except KiwixIngestionError as exc:
                 errors.append(str(exc))
-                self._logger.error("%s", exc)
+                self._logger.error(
+                    "KiwixArchiveIngestor.ingest_archives(archive_ids, refresh): %s",
+                    exc,
+                )
                 continue
 
             imported.append(result)
             total_bytes += result.bytes_downloaded
             total_articles += metadata.article_count or 0
+
+        self._logger.debug(
+            "KiwixArchiveIngestor.ingest_archives(archive_ids, refresh): Result imported=%s errors=%s total_bytes=%s total_articles=%s",
+            len(imported),
+            len(errors),
+            total_bytes,
+            total_articles,
+        )
 
         return KiwixIngestionResult(
             imported=imported,
@@ -209,6 +233,12 @@ class KiwixArchiveIngestor:
         if not self._library_path.exists():
             # Create an empty library so kiwix-manage add succeeds.
             self._library_path.write_text("<library/>\n", encoding="utf-8")
+        self._logger.debug(
+            "KiwixArchiveIngestor._ensure_directories(): Ensured directories archives_dir=%s extract_dir=%s library_path=%s",
+            self._archives_dir,
+            self._extract_dir,
+            self._library_path,
+        )
 
     def _process_archive(
         self,
@@ -217,6 +247,12 @@ class KiwixArchiveIngestor:
         refresh: bool,
     ) -> ArchiveImportResult:
         zim_path, downloaded_bytes = self._download_archive(metadata, refresh=refresh)
+        self._logger.debug(
+            "KiwixArchiveIngestor._process_archive(metadata, refresh): Downloaded archive archive_id=%s bytes=%s path=%s",
+            metadata.archive_id,
+            downloaded_bytes,
+            zim_path,
+        )
         checksum = self._checksum(zim_path)
         if metadata.checksum and metadata.checksum.lower() != checksum.lower():
             raise KiwixIngestionError(
@@ -224,7 +260,18 @@ class KiwixArchiveIngestor:
                 f"(expected {metadata.checksum}, got {checksum})"
             )
 
+        self._logger.debug(
+            "KiwixArchiveIngestor._process_archive(metadata, refresh): Archive checksum verified archive_id=%s checksum=%s",
+            metadata.archive_id,
+            checksum,
+        )
+
         self._register_archive(zim_path, refresh=refresh)
+        self._logger.debug(
+            "KiwixArchiveIngestor._process_archive(metadata, refresh): Archive registered archive_id=%s library=%s",
+            metadata.archive_id,
+            self._library_path,
+        )
 
         timestamp = self._clock()
         knowledge_source = KnowledgeSource(
@@ -257,8 +304,18 @@ class KiwixArchiveIngestor:
 
         if refresh and target_path.exists():
             target_path.unlink()
+            self._logger.debug(
+                "KiwixArchiveIngestor._download_archive(metadata, refresh): Removed existing archive for refresh archive_id=%s path=%s",
+                metadata.archive_id,
+                target_path,
+            )
 
         if target_path.exists():
+            self._logger.debug(
+                "KiwixArchiveIngestor._download_archive(metadata, refresh): Archive already downloaded archive_id=%s path=%s",
+                metadata.archive_id,
+                target_path,
+            )
             return target_path, 0
 
         with tempfile.NamedTemporaryFile(
@@ -275,6 +332,12 @@ class KiwixArchiveIngestor:
             ) from exc
 
         os.replace(tmp_path, target_path)
+        self._logger.debug(
+            "KiwixArchiveIngestor._download_archive(metadata, refresh): Completed download archive_id=%s bytes=%s target=%s",
+            metadata.archive_id,
+            bytes_downloaded,
+            target_path,
+        )
         return target_path, int(bytes_downloaded)
 
     def _register_archive(self, zim_path: Path, *, refresh: bool) -> None:
@@ -292,7 +355,7 @@ class KiwixArchiveIngestor:
             # If the entry already exists, treat as success for non-refresh runs.
             if not refresh and "already part of the library" in message.lower():
                 self._logger.debug(
-                    "Archive %s already registered in library %s",
+                    "KiwixArchiveIngestor._register_archive(zim_path, refresh): Archive %s already registered in library %s",
                     zim_path,
                     self._library_path,
                 )
@@ -300,6 +363,11 @@ class KiwixArchiveIngestor:
             raise KiwixIngestionError(
                 f"{zim_path.name}: kiwix-manage add failed: {message}"
             )
+        self._logger.debug(
+            "KiwixArchiveIngestor._register_archive(zim_path, refresh): kiwix-manage add succeeded path=%s returncode=%s",
+            zim_path,
+            result.returncode,
+        )
 
     def _knowledge_id(self, zim_path: Path) -> UUID:
         key = f"kiwix://{zim_path.name.lower()}"

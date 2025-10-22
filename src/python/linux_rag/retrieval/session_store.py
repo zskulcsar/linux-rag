@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -90,6 +91,7 @@ class SessionStore:
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        self._logger = logging.getLogger(__name__)
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
@@ -97,6 +99,10 @@ class SessionStore:
         schema = SCHEMA_PATH.read_text(encoding="utf-8")
         with self._connect() as conn:
             conn.executescript(schema)
+        self._logger.debug(
+            "SessionStore._ensure_schema(): Ensured session store schema at %s",
+            self._db_path,
+        )
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self._db_path, isolation_level=None)
@@ -150,6 +156,11 @@ class SessionStore:
                     """,
                     ((session_id, source) for source in record.sources),
                 )
+                self._logger.debug(
+                    "SessionStore.record_session(record, cache_entry): Recorded session sources session_id=%s sources=%s",
+                    session_id,
+                    record.sources,
+                )
 
             if cache_entry is not None:
                 conn.execute(
@@ -176,6 +187,19 @@ class SessionStore:
                         cache_entry.size_bytes,
                     ),
                 )
+                self._logger.debug(
+                    "SessionStore.record_session(record, cache_entry): Upserted cache entry fingerprint=%s session_id=%s size_bytes=%s",
+                    cache_entry.fingerprint,
+                    session_id,
+                    cache_entry.size_bytes,
+                )
+
+        self._logger.debug(
+            "SessionStore.record_session(record, cache_entry): Recorded answer session session_id=%s cache_hit=%s response_time_ms=%s",
+            session_id,
+            record.cache_hit,
+            record.response_time_ms,
+        )
 
 
 __all__ = ["AnswerSessionRecord", "CacheEntryMetadata", "SessionStore"]

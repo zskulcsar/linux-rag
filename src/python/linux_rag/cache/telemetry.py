@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 UTC = timezone.utc
@@ -32,6 +33,7 @@ class CacheTelemetry:
         self._last_eviction_at: datetime | None = None
         self._last_eviction_removed: int = 0
         self._last_eviction_bytes: int = 0
+        self._logger = logging.getLogger(__name__)
 
     def record_eviction(self, *, removed: int, bytes_freed: int) -> None:
         """Capture the outcome of the most recent eviction pass."""
@@ -41,6 +43,12 @@ class CacheTelemetry:
         self._last_eviction_at = datetime.now(UTC)
         self._last_eviction_removed = removed
         self._last_eviction_bytes = bytes_freed
+        self._logger.debug(
+            "CacheTelemetry.record_eviction(removed, bytes_freed): Recorded eviction metrics removed=%s bytes_freed=%s timestamp=%s",
+            removed,
+            bytes_freed,
+            self._last_eviction_at,
+        )
 
     def snapshot(
         self,
@@ -54,7 +62,7 @@ class CacheTelemetry:
         if total_entries < 0 or total_bytes < 0 or budget_bytes < 0:
             raise ValueError("Metric counters must be non-negative.")
 
-        return CacheMetrics(
+        metrics = CacheMetrics(
             total_entries=total_entries,
             total_bytes=total_bytes,
             budget_bytes=budget_bytes,
@@ -62,6 +70,14 @@ class CacheTelemetry:
             last_eviction_removed=self._last_eviction_removed,
             last_eviction_bytes=self._last_eviction_bytes,
         )
+        self._logger.debug(
+            "CacheTelemetry.snapshot(total_entries, total_bytes, budget_bytes): Cache metrics snapshot entries=%s bytes=%s budget=%s last_eviction_removed=%s",
+            total_entries,
+            total_bytes,
+            budget_bytes,
+            self._last_eviction_removed,
+        )
+        return metrics
 
 
 __all__ = ["CacheMetrics", "CacheTelemetry"]

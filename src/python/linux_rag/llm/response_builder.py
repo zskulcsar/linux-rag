@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import Any, Iterable, Protocol
@@ -94,6 +95,12 @@ class ResponseBuilder:
         self._default_model = default_model
         self._prompt_template = prompt_template
         self._max_context_documents = max_context_documents
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug(
+            "ResponseBuilder.__init__(llm_client, default_model, prompt_template, max_context_documents): Initialized ResponseBuilder default_model=%s max_context_documents=%s",
+            default_model,
+            max_context_documents,
+        )
 
     async def build_answer(
         self,
@@ -107,15 +114,28 @@ class ResponseBuilder:
 
         normalized_query = query.strip()
         if not normalized_query:
+            self._logger.debug(
+                "ResponseBuilder.build_answer(query, candidates, model, llm_options): Rejected build_answer due to blank query"
+            )
             raise ResponseBuilderError("query must not be blank.")
 
         context_candidates = self._prepare_candidates(candidates)
         if not context_candidates:
+            self._logger.debug(
+                "ResponseBuilder.build_answer(query, candidates, model, llm_options): No candidates available for query=%s",
+                normalized_query,
+            )
             raise ResponseBuilderError("no retrieval candidates available for synthesis.")
 
         prompt = self._render_prompt(normalized_query, context_candidates)
 
         chosen_model = model or self._default_model
+        self._logger.debug(
+            "ResponseBuilder.build_answer(query, candidates, model, llm_options): Invoking LLM model=%s query=%s context_docs=%s",
+            chosen_model,
+            normalized_query,
+            len(context_candidates),
+        )
 
         try:
             generation = await self._llm_client.generate(
@@ -124,10 +144,19 @@ class ResponseBuilder:
                 options=llm_options,
             )
         except Exception as exc:  # pragma: no cover - surface upstream
+            self._logger.exception(
+                "ResponseBuilder.build_answer(query, candidates, model, llm_options): LLM generation failed model=%s query=%s",
+                chosen_model,
+                normalized_query,
+            )
             raise ResponseBuilderError(f"LLM generation failed: {exc}") from exc
 
         answer_text = generation.text.strip()
         if not answer_text:
+            self._logger.debug(
+                "ResponseBuilder.build_answer(query, candidates, model, llm_options): LLM returned empty answer for query=%s",
+                normalized_query,
+            )
             raise ResponseBuilderError("LLM returned an empty answer.")
 
         citations = [
@@ -140,6 +169,12 @@ class ResponseBuilder:
             for candidate in context_candidates
         ]
 
+        self._logger.debug(
+            "ResponseBuilder.build_answer(query, candidates, model, llm_options): LLM generation succeeded model=%s latency_ms=%s citation_count=%s",
+            generation.model or chosen_model,
+            generation.latency_ms,
+            len(citations),
+        )
         return AnswerResponse(
             answer=answer_text,
             model=generation.model or chosen_model,
@@ -158,6 +193,11 @@ class ResponseBuilder:
             if len(prepared) >= self._max_context_documents:
                 break
 
+        self._logger.debug(
+            "ResponseBuilder._prepare_candidates(candidates): Prepared %s context candidates (limit=%s)",
+            len(prepared),
+            self._max_context_documents,
+        )
         return prepared
 
     def _render_prompt(
@@ -181,6 +221,11 @@ class ResponseBuilder:
             )
 
         context_block = "\n\n".join(context_parts)
+        self._logger.debug(
+            "ResponseBuilder._render_prompt(query, candidates): Rendered prompt context for query=%s with %s entries",
+            query,
+            len(candidates),
+        )
         return self._prompt_template.format(
             context=context_block,
             question=query,

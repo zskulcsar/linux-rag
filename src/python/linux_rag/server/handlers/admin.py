@@ -126,11 +126,19 @@ class AdminHandler:
     async def run_ingestion(self, request, context) -> Any:
         """Handle RunIngestion RPC calls."""
 
-        self._logger.info(f"Ingestion started with {request}")
+        self._logger.info(
+            "AdminHandler.run_ingestion(request, context): RunIngestion invoked refresh_man_pages=%s wiki_ids=%s",
+            getattr(request, "refresh_man_pages", None),
+            list(getattr(request, "wiki_archive_ids", [])),
+        )
 
         job_id = self._job_store.start_job(
             IngestionJobType.MANUAL_REFRESH,
             started_at=self._clock(),
+        )
+        self._logger.debug(
+            "AdminHandler.run_ingestion(request, context): Started ingestion job_id=%s",
+            job_id,
         )
 
         man_pages_processed = 0
@@ -138,35 +146,50 @@ class AdminHandler:
         error_details: list[_ErrorDetails] = []
 
         try:
-            # TODO: check the code why self._man_ingestor is not initialized
             if request.refresh_man_pages and self._man_ingestor and self._manpage_root:
-                self._logger.info(f"Refreshing man pages")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Refreshing man pages root=%s refresh=%s",
+                    self._manpage_root,
+                    request.refresh_man_pages,
+                )
                 man_result = await asyncio.to_thread(
                     self._man_ingestor.ingest,
                     self._manpage_root,
                     refresh=True,
                 )
                 man_pages_processed = man_result.processed_count
-                self._logger.info(f"Ingestion of man pages completed. "
-                                  + f"{man_pages_processed} man pages processed.")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Man page ingestion completed processed=%s errors=%s",
+                    man_pages_processed,
+                    len(man_result.errors),
+                )
                 error_details.extend(self._normalize_errors(man_result.errors))
 
             archive_ids = list(request.wiki_archive_ids) or list(self._default_wiki_archives)
             if archive_ids and self._wiki_ingestor:
-                self._logger.info(f"Ingesting wiki pages")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Ingesting wiki archives archive_ids=%s",
+                    archive_ids,
+                )
                 wiki_result = await asyncio.to_thread(
                     self._wiki_ingestor.ingest_archives,
                     archive_ids,
                     refresh=True,
                 )
                 wiki_articles_processed = wiki_result.total_articles
-                self._logger.info(f"Ingestion of wiki pages completed; "
-                                  + f"{wiki_articles_processed} wiki articles processed.")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Wiki ingestion completed processed=%s errors=%s",
+                    wiki_articles_processed,
+                    len(wiki_result.errors),
+                )
                 error_details.extend(self._normalize_errors(wiki_result.errors))
 
             for err in error_details:
-                self._logger.info(f"Encountered error during ingestion. "
-                                  + f"Error: {err.message}, Source: {err.source}.")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Recording ingestion error source=%s message=%s",
+                    err.source,
+                    err.message,
+                )
                 self._job_store.record_error(
                     job_id,
                     message=err.message,
@@ -181,22 +204,37 @@ class AdminHandler:
                 wiki_articles_processed=wiki_articles_processed,
                 completed_at=completed_at,
             )
-            self._logger.info(f"Ingestion job completed at {completed_at}")
+            self._logger.info(
+                "AdminHandler.run_ingestion(request, context): RunIngestion completed job_id=%s man_pages=%s wiki_articles=%s",
+                job_id,
+                man_pages_processed,
+                wiki_articles_processed,
+            )
 
             if self._schedule_store is not None:
                 self._schedule_store.update(last_success_at=completed_at)
-                self._logger.info(f"Updated store schedule")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Updated schedule store last_success_at=%s",
+                    completed_at,
+                )
 
             response = rag_service_pb2.RunIngestionResponse(  # type: ignore[attr-defined]
                 job_id=str(job_id),
                 man_pages_processed=man_pages_processed,
                 wiki_articles_processed=wiki_articles_processed,
             )
-            self._logger.info(f"Created ingestion response")
+            self._logger.debug(
+                "AdminHandler.run_ingestion(request, context): Created RunIngestionResponse job_id=%s errors=%s",
+                job_id,
+                len(error_details),
+            )
 
             for err in error_details:
-                self._logger.info(f"Encountered error during ingestion response creation. "
-                                  + f"Error: {err.message}, Source: {err.source}")
+                self._logger.debug(
+                    "AdminHandler.run_ingestion(request, context): Appending error to response source=%s message=%s",
+                    err.source,
+                    err.message,
+                )
                 response.errors.add(
                     source=err.source or "unknown",
                     error_message=err.message,
@@ -211,7 +249,10 @@ class AdminHandler:
                 wiki_articles_processed=wiki_articles_processed,
                 failed_at=failed_at,
             )
-            self._logger.exception("RunIngestion failed: %s", exc)
+            self._logger.exception(
+                "AdminHandler.run_ingestion(request, context): RunIngestion failed: %s",
+                exc,
+            )
             if context is not None:
                 await context.abort(grpc.StatusCode.INTERNAL, f"RunIngestion failed: {exc!s}")
             raise grpc.RpcError(f"RunIngestion failed: {exc!s}")
@@ -222,6 +263,12 @@ class AdminHandler:
         cache_stats = self._cache_stats_provider()
         history = self._job_store.refresh_history()
         latest_job = history.latest_job
+        self._logger.debug(
+            "AdminHandler.get_status(request, context): Fetched status snapshot cache_disk_pct=%.2f total_entries=%s latest_job=%s",
+            cache_stats.disk_pct,
+            cache_stats.total_entries,
+            getattr(latest_job, "job_id", None),
+        )
 
         man_pages_processed = 0
         wiki_articles_processed = 0
@@ -255,6 +302,10 @@ class AdminHandler:
             statuses=(IngestionJobStatus.FAILED,),
         )
         retry_count = len(failed_jobs)
+        self._logger.debug(
+            "AdminHandler.get_status(request, context): Recent failed jobs count=%s",
+            retry_count,
+        )
 
         cadence = ""
         next_run_at = ""
@@ -265,6 +316,12 @@ class AdminHandler:
             next_run_at = _serialize_optional_timestamp(schedule_state.next_run_at)
             fallback_success = schedule_state.last_success_at or history.last_success_at
             last_success_at = _serialize_optional_timestamp(fallback_success)
+            self._logger.debug(
+                "AdminHandler.get_status(request, context): Schedule store state cadence=%s next_run_at=%s last_success_at=%s",
+                cadence,
+                next_run_at,
+                last_success_at,
+            )
 
         response = rag_service_pb2.GetStatusResponse(  # type: ignore[attr-defined]
             latest_job_id=latest_job_id,
@@ -300,6 +357,12 @@ class AdminHandler:
         eviction.last_eviction_removed = cache_stats.last_eviction_removed
         eviction.last_eviction_bytes = cache_stats.last_eviction_bytes
 
+        self._logger.debug(
+            "AdminHandler.get_status(request, context): GetStatus response prepared latest_job_id=%s cache_pct=%.2f progress_stage=%s",
+            latest_job_id,
+            response.cache_disk_pct,
+            progress.stage,
+        )
         return response
 
     def _normalize_errors(self, errors: Iterable[str]) -> list[_ErrorDetails]:
@@ -315,6 +378,11 @@ class AdminHandler:
                     source = prefix.strip()
                 message = remainder.strip() or message
             normalized.append(_ErrorDetails(source=source, message=message))
+            self._logger.debug(
+                "AdminHandler._normalize_errors(errors): Normalized ingestion error source=%s message=%s",
+                source,
+                message,
+            )
         return normalized
 
 

@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import signal
+import sys
 import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -36,6 +37,7 @@ DEFAULT_SOCKET_ENDPOINT = f"unix:/{DEFAULT_SOCKET_PATH}"
 DEFAULT_LOG_LEVEL = "info"
 CACHE_BUDGET_BYTES = 1_073_741_824
 
+logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ServerConfig:
@@ -87,6 +89,13 @@ class ServerConfig:
             value = ollama_cfg.get(key)
             if value:
                 active_models.append(str(value))
+        logger.debug(
+            "ServerConfig.from_mapping(data): Generated ServerConfig socket=%s log_level=%s data_root=%s cache_dir=%s",
+            socket_endpoint,
+            log_level,
+            data_root,
+            cache_dir,
+        )
         return cls(
             socket_endpoint=socket_endpoint,
             log_level=log_level,
@@ -123,10 +132,22 @@ def _resolve_socket_endpoint(value: Any, default: Path) -> str:
         return expanded
     if lowered.startswith("unix:/"):
         socket_path = Path(expanded[len("unix:/") :])
-        return f"unix:/{socket_path.expanduser().resolve()}"
+        resolved = socket_path.expanduser().resolve()
+        logger.debug(
+            "_resolve_socket_endpoint(value, default): Resolved unix socket endpoint=%s -> %s",
+            expanded,
+            resolved,
+        )
+        return f"unix:/{resolved}"
 
     socket_path = Path(expanded)
-    return f"unix:/{socket_path.expanduser().resolve()}"
+    resolved_socket = socket_path.expanduser().resolve()
+    logger.debug(
+        "_resolve_socket_endpoint(value, default): Resolved socket endpoint=%s -> %s",
+        expanded,
+        resolved_socket,
+    )
+    return f"unix:/{resolved_socket}"
 
 
 def _resolve_path_value(value: Any, default: Path) -> Path:
@@ -157,6 +178,11 @@ def _fallback_socket_path(original: Path) -> Path:
     for candidate in candidates:
         try:
             _ensure_parent_ready(candidate.parent)
+            logger.debug(
+                "_fallback_socket_path(original): Selected fallback socket path=%s for original=%s",
+                candidate,
+                original,
+            )
             return candidate
         except PermissionError as exc:
             last_error = exc
@@ -174,6 +200,7 @@ def _unlink_socket(path: Path) -> None:
     """Remove a stale socket if the file already exists."""
     try:
         if path.exists():
+            logger.debug("_unlink_socket(path): Removing stale socket at %s", path)
             path.unlink()
     except FileNotFoundError:  # pragma: no cover - race: file removed between exists/unlink
         return
@@ -235,31 +262,80 @@ def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Override the Unix domain socket path defined in the configuration.",
     )
-    return parser.parse_args(list(argv) if argv is not None else None)
+    parsed = parser.parse_args(list(argv) if argv is not None else None)
+    logger.debug(
+        "_parse_args(argv): Parsed CLI arguments config=%s socket=%s",
+        parsed.config,
+        parsed.socket,
+    )
+    return parsed
 
 
 def _load_config(path: Path | None) -> ServerConfig:
     if path is None:
+        logger.debug("_load_config(path): No config path provided, using defaults.")
         return ServerConfig()
 
     if not path.exists():
         raise FileNotFoundError(f"Configuration file not found: {path}")
 
     if yaml is None:
-        logging.warning(
-            "PyYAML not available; falling back to default runtime configuration."
+        logger.warning(
+            "_load_config(path): PyYAML not available; falling back to default runtime configuration."
         )
         return ServerConfig()
 
     with path.open("r", encoding="utf-8") as stream:
         data = yaml.safe_load(stream) or {}
 
+    logger.debug("_load_config(path): Loaded configuration file %s", path)
     return ServerConfig.from_mapping(data)
 
 
+def _coerce_log_level(value: str, default: int) -> int:
+    candidate = value.strip().upper()
+    if not candidate:
+        return default
+    if candidate.isdigit():
+        try:
+            return int(candidate)
+        except ValueError:
+            return default
+    level = getattr(logging, candidate, None)
+    if isinstance(level, int):
+        return level
+    raise ValueError(f"Invalid log level '{value}'")
+
+
+def _resolve_log_level(default_level_name: str) -> tuple[int, str]:
+    default_level = _coerce_log_level(default_level_name, logging.INFO)
+    env_level = os.environ.get("SERVER_LOG_LEVEL")
+    if not env_level:
+        return default_level, default_level_name
+    try:
+        resolved = _coerce_log_level(env_level, default_level)
+        return resolved, env_level
+    except ValueError:
+        sys.stderr.write(
+            f"SERVER_LOG_LEVEL value '{env_level}' is invalid; falling back to {default_level_name}.\n"
+        )
+        return default_level, default_level_name
+
+
 def _configure_logging(level_name: str) -> None:
-    level = getattr(logging, level_name.upper(), logging.INFO)
-    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s")
+    level, source = _resolve_log_level(level_name)
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s", force=True)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    for name, obj in logging.root.manager.loggerDict.items():
+        if isinstance(obj, logging.Logger):
+            obj.setLevel(level)
+    logger.debug(
+        "_configure_logging(level_name): Configured logging requested_level=%s resolved_level=%s source=%s",
+        level_name,
+        level,
+        source,
+    )
 
 
 def _prepare_socket(path: Path) -> Path:
@@ -268,13 +344,18 @@ def _prepare_socket(path: Path) -> Path:
         candidate = path
     except PermissionError as exc:
         candidate = _fallback_socket_path(path)
-        logging.warning(
-            "Unable to create socket directory %s (%s). Falling back to %s. "
+        logger.warning(
+            "_prepare_socket(path): Unable to create socket directory %s (%s). Falling back to %s. "
             "Set LINUX_RAG_SOCKET or pre-create the runtime directory to silence this warning.",
             path.parent,
             exc,
             candidate,
         )
+    logger.debug(
+        "_prepare_socket(path): Preparing socket candidate=%s target=%s",
+        candidate,
+        path,
+    )
     _unlink_socket(candidate)
     return candidate
 
@@ -296,6 +377,13 @@ def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
     disk_pct = 0.0
     if CACHE_BUDGET_BYTES > 0:
         disk_pct = min((total_bytes / CACHE_BUDGET_BYTES) * 100.0, 100.0)
+    logger.debug(
+        "_compute_cache_stats(cache_dir): Computed cache stats directory=%s disk_pct=%.2f total_bytes=%s total_entries=%s",
+        cache_dir,
+        disk_pct,
+        total_bytes,
+        total_entries,
+    )
     return (disk_pct, total_bytes, total_entries)
 
 
@@ -316,7 +404,7 @@ def _build_admin_handler(config: ServerConfig) -> AdminHandler:
             last_eviction_bytes=0,
         )
 
-    return AdminHandler(
+    handler = AdminHandler(
         job_store=job_store,
         schedule_store=schedule_store,
         manpage_root=str(config.manpage_root),
@@ -324,6 +412,14 @@ def _build_admin_handler(config: ServerConfig) -> AdminHandler:
         active_models=config.active_models,
         cache_stats_provider=cache_snapshot,
     )
+    logger.debug(
+        "_build_admin_handler(config): Created AdminHandler job_store=%s schedule_store=%s man_root=%s default_wiki_archives=%s",
+        config.ingestion_jobs_db,
+        config.schedule_db_path,
+        config.manpage_root,
+        config.default_wiki_archives,
+    )
+    return handler
 
 
 def _create_server(config: ServerConfig) -> Server:
@@ -340,6 +436,10 @@ def _bind_server(server: Server, endpoint: str) -> str:
     """Bind the gRPC server to the requested endpoint, with TCP fallback if needed."""
 
     def _bind(ep: str) -> tuple[int, str, str]:
+        logger.debug(
+            "_bind_server(server, endpoint)._bind(ep): Attempting to bind server to endpoint=%s",
+            ep,
+        )
         lowered = ep.lower()
         scheme = "unix"
         target = ep
@@ -349,6 +449,10 @@ def _bind_server(server: Server, endpoint: str) -> str:
         try:
             result = server.add_insecure_port(target if scheme == "tcp" else ep)
         except RuntimeError:
+            logger.debug(
+                "_bind_server(server, endpoint)._bind(ep): Binding failed for endpoint=%s",
+                ep,
+            )
             return (0, scheme, target)
         return (result, scheme, target)
 
@@ -359,6 +463,10 @@ def _bind_server(server: Server, endpoint: str) -> str:
             if sep and port == "0":
                 return f"tcp://{host}:{result}"
             return f"tcp://{target}"
+        logger.debug(
+            "_bind_server(server, endpoint): Successfully bound server to endpoint=%s",
+            endpoint,
+        )
         return endpoint
 
     if endpoint.lower().startswith("unix:/"):
@@ -370,8 +478,9 @@ def _bind_server(server: Server, endpoint: str) -> str:
             )
         host, sep, _port = target.rpartition(":")
         resolved = f"tcp://{host}:{result}" if sep else f"tcp://{result}"
-        logging.warning(
-            "Falling back to TCP listener at %s due to unix socket bind failure.", resolved
+        logger.warning(
+            "_bind_server(server, endpoint): Falling back to TCP listener at %s due to unix socket bind failure.",
+            resolved,
         )
         return resolved
 
@@ -380,27 +489,43 @@ def _bind_server(server: Server, endpoint: str) -> str:
 
 async def _serve(config: ServerConfig) -> None:
     _configure_logging(config.log_level)
+    logger.debug(
+        "_serve(config): Starting server with config socket=%s data_root=%s cache_dir=%s models=%s",
+        config.socket_endpoint,
+        config.data_root,
+        config.cache_dir,
+        config.active_models,
+    )
     endpoint = config.socket_endpoint
     if endpoint.lower().startswith("unix:/"):
         socket_path = Path(endpoint[len("unix:/") :])
         try:
             prepared = _prepare_socket(socket_path)
         except PermissionError as exc:
-            logging.error("Failed to prepare unix socket %s: %s", socket_path, exc)
+            logger.error(
+                "_serve(config): Failed to prepare unix socket %s: %s", socket_path, exc
+            )
             raise SystemExit(1) from exc
         if prepared != socket_path:
             endpoint = f"unix:/{prepared}"
+            logger.debug("_serve(config): Using fallback socket path %s", endpoint)
     server = _create_server(config)
     bound_endpoint = _bind_server(server, endpoint)
     config = replace(config, socket_endpoint=bound_endpoint)
     await server.start()
-    logging.info("Linux RAG gRPC server listening on %s", config.socket_endpoint)
+    logger.info(
+        "_serve(config): Linux RAG gRPC server listening on %s",
+        config.socket_endpoint,
+    )
 
     shutdown_event = asyncio.Event()
     loop = asyncio.get_running_loop()
 
     def _handle_signal(signame: str) -> None:
-        logging.info("Received %s; initiating graceful shutdown.", signame)
+        logger.info(
+            "_serve.<locals>._handle_signal(signame): Received %s; initiating graceful shutdown.",
+            signame,
+        )
         shutdown_event.set()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -414,7 +539,7 @@ async def _serve(config: ServerConfig) -> None:
     finally:
         await server.stop(grace=5.0)
         await server.wait_for_termination()
-        logging.info("Linux RAG gRPC server stopped.")
+        logger.info("_serve(config): Linux RAG gRPC server stopped.")
 
 
 def serve(argv: Iterable[str] | None = None) -> None:
@@ -424,6 +549,7 @@ def serve(argv: Iterable[str] | None = None) -> None:
     if args.socket is not None:
         endpoint = _resolve_socket_endpoint(args.socket, DEFAULT_SOCKET_PATH)
         config = replace(config, socket_endpoint=endpoint)
+        logger.debug("serve(argv): Overrode socket endpoint via CLI to %s", endpoint)
     asyncio.run(_serve(config))
 
 

@@ -88,6 +88,9 @@ class RefreshScheduler:
             self.state.next_run_at = None
         elif self.state.running:
             self.state.next_run_at = self._time_source() + cadence
+        self._logger.debug(
+            "RefreshScheduler.set_cadence(cadence): Cadence updated to %s", cadence
+        )
 
     def should_trigger(self, state: SchedulerState) -> bool:
         """Return whether the cadence elapsed and a new run should start."""
@@ -97,13 +100,24 @@ class RefreshScheduler:
         if state.last_run_at is None:
             return True
         elapsed = self._time_source() - state.last_run_at
-        return elapsed >= self._cadence
+        should = elapsed >= self._cadence
+        self._logger.debug(
+            "RefreshScheduler.should_trigger(state): Cadence evaluation elapsed=%s cadence=%s should_trigger=%s",
+            elapsed,
+            self._cadence,
+            should,
+        )
+        return should
 
     def with_trigger(self, state: SchedulerState) -> SchedulerState:
         """Return updated scheduler state after a trigger fires."""
 
         now = self._time_source()
         next_run = now + self._cadence if self._cadence is not None else None
+        self._logger.debug(
+            "RefreshScheduler.with_trigger(state): Scheduler trigger fired next_run_at=%s",
+            next_run,
+        )
         return SchedulerState(
             last_run_at=now,
             last_success_at=state.last_success_at,
@@ -123,6 +137,11 @@ class RefreshScheduler:
         self.state.next_run_at = (
             self._time_source() + self._cadence if self._cadence else None
         )
+        self._logger.debug(
+            "RefreshScheduler.start(): Starting scheduler loop cadence=%s next_run_at=%s",
+            self._cadence,
+            self.state.next_run_at,
+        )
         self._loop_task = asyncio.create_task(self._run_loop(), name="refresh-scheduler")
 
     async def stop(self) -> None:
@@ -137,6 +156,7 @@ class RefreshScheduler:
             await self._loop_task
         self._loop_task = None
         self.state.running = False
+        self._logger.debug("RefreshScheduler.stop(): Scheduler loop stopped")
 
     async def request_manual_run(
         self, metadata: dict[str, str] | None = None
@@ -147,6 +167,10 @@ class RefreshScheduler:
             trigger=TriggerType.MANUAL, requested_at=self._time_source(), metadata=metadata
         )
         await self._queue.put(request)
+        self._logger.debug(
+            "RefreshScheduler.request_manual_run(metadata): Manual refresh requested metadata=%s",
+            metadata,
+        )
 
     async def _run_loop(self) -> None:
         try:
@@ -195,8 +219,15 @@ class RefreshScheduler:
         except asyncio.CancelledError:
             raise
         except Exception:  # pragma: no cover - defensive logging
-            self._logger.exception("Unexpected error retrieving scheduler request.")
+            self._logger.exception(
+                "RefreshScheduler._next_request(): Unexpected error retrieving scheduler request."
+            )
             return None, False
+        finally:
+            self._logger.debug(
+                "RefreshScheduler._next_request(): Next request resolution complete timeout=%s",
+                timeout,
+            )
 
     def _compute_timeout(self) -> Optional[float]:
         if self._cadence is None or self.state.next_run_at is None:
@@ -206,21 +237,36 @@ class RefreshScheduler:
         delta = (self.state.next_run_at - now).total_seconds()
         if delta <= 0:
             return 0
+        self._logger.debug(
+            "RefreshScheduler._compute_timeout(): Computed scheduler timeout seconds=%s next_run_at=%s",
+            delta,
+            self.state.next_run_at,
+        )
         return delta
 
     async def _execute(self, request: RefreshRequest) -> None:
         async with self._lock:
             start_time = self._time_source()
             self.state.last_run_at = start_time
+            self._logger.debug(
+                "RefreshScheduler._execute(request): Executing refresh request trigger=%s requested_at=%s",
+                request.trigger,
+                request.requested_at,
+            )
             try:
                 await self._runner(request)
             except asyncio.CancelledError:
-                self._logger.warning("Refresh run cancelled.")
+                self._logger.warning(
+                    "RefreshScheduler._execute(request): Refresh run cancelled."
+                )
                 self.state.last_error = "cancelled"
                 raise
             except Exception as exc:
                 self.state.last_error = str(exc)
-                self._logger.exception("Refresh run failed: trigger=%s", request.trigger)
+                self._logger.exception(
+                    "RefreshScheduler._execute(request): Refresh run failed trigger=%s",
+                    request.trigger,
+                )
             else:
                 self.state.last_success_at = self._time_source()
                 self.state.last_error = None
@@ -229,6 +275,12 @@ class RefreshScheduler:
                     self.state.next_run_at = self._time_source() + self._cadence
                 else:
                     self.state.next_run_at = None
+                self._logger.debug(
+                    "RefreshScheduler._execute(request): Refresh run completed trigger=%s last_error=%s next_run_at=%s",
+                    request.trigger,
+                    self.state.last_error,
+                    self.state.next_run_at,
+                )
 
 
 __all__ = ["RefreshRequest", "RefreshScheduler", "SchedulerState", "TriggerType"]

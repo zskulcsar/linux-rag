@@ -77,13 +77,25 @@ class CacheEvictionWorker:
     def _current_usage(self, conn: sqlite3.Connection) -> int:
         cursor = conn.execute("SELECT COALESCE(SUM(size_bytes), 0) FROM cache_entries;")
         value = cursor.fetchone()[0]
-        return int(value) if value is not None else 0
+        usage = int(value) if value is not None else 0
+        self._logger.debug(
+            "CacheEvictionWorker._current_usage(conn): Computed current cache usage=%s bytes from db=%s",
+            usage,
+            self._db_path,
+        )
+        return usage
 
     def _budget_bytes(self) -> int:
         usage = shutil.disk_usage(self._data_root)
         budget = int(usage.total * self._budget_ratio)
         if budget <= 0:
             raise RuntimeError("Calculated budget is non-positive; check disk configuration.")
+        self._logger.debug(
+            "CacheEvictionWorker._budget_bytes(): Calculated cache budget=%s (ratio=%s total=%s)",
+            budget,
+            self._budget_ratio,
+            usage.total,
+        )
         return budget
 
     def enforce_budget(self) -> EvictionStats:
@@ -94,6 +106,11 @@ class CacheEvictionWorker:
             budget_bytes = self._budget_bytes()
 
             if usage_bytes <= budget_bytes:
+                self._logger.debug(
+                    "CacheEvictionWorker.enforce_budget(): Cache within budget usage_bytes=%s budget_bytes=%s",
+                    usage_bytes,
+                    budget_bytes,
+                )
                 return EvictionStats(
                     removed_entries=0,
                     bytes_freed=0,
@@ -117,16 +134,30 @@ class CacheEvictionWorker:
                 removed += 1
                 freed += entry.size_bytes
                 usage_bytes -= entry.size_bytes
+                self._logger.debug(
+                    "CacheEvictionWorker.enforce_budget(): Evicted cache entry fingerprint=%s size_bytes=%s remaining_usage=%s",
+                    entry.fingerprint,
+                    entry.size_bytes,
+                    usage_bytes,
+                )
 
                 if usage_bytes <= budget_bytes:
                     break
 
-            return EvictionStats(
+            stats = EvictionStats(
                 removed_entries=removed,
                 bytes_freed=freed,
                 usage_bytes=max(usage_bytes, 0),
                 budget_bytes=budget_bytes,
             )
+            self._logger.debug(
+                "CacheEvictionWorker.enforce_budget(): Eviction stats removed=%s bytes_freed=%s final_usage=%s budget=%s",
+                stats.removed_entries,
+                stats.bytes_freed,
+                stats.usage_bytes,
+                stats.budget_bytes,
+            )
+            return stats
 
     def _evict_entry(self, conn: sqlite3.Connection, entry: CacheEntry) -> None:
         if self._on_entry_evicted:
@@ -134,12 +165,17 @@ class CacheEvictionWorker:
                 self._on_entry_evicted(entry)
             except Exception:  # pragma: no cover - defensive logging
                 self._logger.exception(
-                    "Eviction callback failed for fingerprint=%s", entry.fingerprint
+                    "CacheEvictionWorker._evict_entry(conn, entry): Eviction callback failed for fingerprint=%s",
+                    entry.fingerprint,
                 )
 
         conn.execute(
             "DELETE FROM cache_entries WHERE fingerprint = ?;",
             (entry.fingerprint,),
+        )
+        self._logger.debug(
+            "CacheEvictionWorker._evict_entry(conn, entry): Deleted cache entry fingerprint=%s",
+            entry.fingerprint,
         )
 
 
