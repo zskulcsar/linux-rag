@@ -1,5 +1,6 @@
 """Language model integration utilities."""
 
+from .clients import OllamaLLMClient
 from .response_builder import (
     AnswerResponse,
     Citation,
@@ -9,6 +10,7 @@ from .response_builder import (
 )
 
 __all__ = [
+    "OllamaLLMClient",
     "ResponseBuilder",
     "ResponseBuilderError",
     "AnswerResponse",

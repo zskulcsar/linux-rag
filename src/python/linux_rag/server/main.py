@@ -24,7 +24,7 @@ from grpc.aio import Server  # type: ignore[import-untyped]
 from linux_rag.contracts import rag_service_pb2_grpc
 from linux_rag.ingestion import IngestionJobStore, ManPageIngestor
 from linux_rag.ingestion.schedule_store import ScheduleStore
-from linux_rag.llm import ResponseBuilder
+from linux_rag.llm import OllamaLLMClient, ResponseBuilder
 from linux_rag.retrieval import (
     OllamaEmbedder,
     RetrievalPipeline,
@@ -65,6 +65,8 @@ class ServerConfig:
     active_models: tuple[str, ...] = ()
     ollama_host: str = "127.0.0.1"
     ollama_port: int = 11434
+    ollama_scheme: str = "http"
+    default_model: str = "gemma3:1b"
     embedding_model: str = "embeddinggemma"
     weaviate_scheme: str = "http"
     weaviate_host: str = "127.0.0.1"
@@ -111,9 +113,11 @@ class ServerConfig:
             value = ollama_cfg.get(key)
             if value:
                 active_models.append(str(value))
+        default_model = _resolve_text(ollama_cfg.get("default_model"), "gemma3:1b")
         embedding_model = _resolve_text(ollama_cfg.get("embedding_model"), "embeddinggemma")
         ollama_host = _resolve_text(ollama_cfg.get("host"), "127.0.0.1")
         ollama_port = _resolve_int(ollama_cfg.get("port"), 11434)
+        ollama_scheme = _resolve_text(ollama_cfg.get("scheme"), "http")
 
         weaviate_cfg = services_cfg.get("weaviate", {})
         weaviate_scheme = _resolve_text(weaviate_cfg.get("scheme"), "http")
@@ -153,6 +157,8 @@ class ServerConfig:
             active_models=tuple(active_models),
             ollama_host=ollama_host,
             ollama_port=ollama_port,
+            ollama_scheme=ollama_scheme,
+            default_model=default_model,
             embedding_model=embedding_model,
             weaviate_scheme=weaviate_scheme,
             weaviate_host=weaviate_host,
@@ -318,13 +324,6 @@ class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
 
     async def ControlStack(self, request, context):  # type: ignore[override]
         raise NotImplementedError("ControlStack handler not implemented yet.")
-
-
-class _UnconfiguredLLMClient:
-    async def generate(self, *args: Any, **kwargs: Any) -> Any:
-        raise RuntimeError(
-            "LLM client is not configured; connect ResponseBuilder to Ollama to enable Ask."
-        )
 
 
 def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
@@ -496,16 +495,23 @@ def _build_retrieval_pipeline(config: ServerConfig) -> RetrievalPipeline:
 
 
 def _build_response_builder(config: ServerConfig) -> ResponseBuilder:
-    """Instantiate the response builder backed by a placeholder LLM client."""
+    """Instantiate the response builder backed by the Ollama client."""
 
-    default_model = config.active_models[0] if config.active_models else "gemma3:1b"
+    default_model = config.active_models[0] if config.active_models else config.default_model
+    llm_client = OllamaLLMClient(
+        host=config.ollama_host,
+        port=config.ollama_port,
+        scheme=config.ollama_scheme,
+    )
     builder = ResponseBuilder(
-        llm_client=_UnconfiguredLLMClient(),
+        llm_client=llm_client,
         default_model=default_model,
     )
     logger.debug(
-        "_build_response_builder(config): Created ResponseBuilder default_model=%s",
+        "_build_response_builder(config): Created ResponseBuilder default_model=%s host=%s port=%s",
         default_model,
+        config.ollama_host,
+        config.ollama_port,
     )
     return builder
 
