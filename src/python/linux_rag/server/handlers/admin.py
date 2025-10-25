@@ -122,7 +122,7 @@ class AdminHandler:
         self._active_models = tuple(active_models or ())
         self._clock = clock or _utcnow
         self._logger = logging.getLogger(__name__)
-        self._logger.debug(f"AdminHandler.__init__(...): Completed. Settings: "
+        self._logger.debug("AdminHandler.__init__(...): Completed. Settings: "
                             + f"_job_store={self._job_store}, "
                             + f"_schedule_store={self._schedule_store}, "
                             + f"_man_ingestor={self._man_ingestor}, "

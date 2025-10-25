@@ -24,7 +24,10 @@ from grpc.aio import Server  # type: ignore[import-untyped]
 from linux_rag.contracts import rag_service_pb2_grpc
 from linux_rag.ingestion import IngestionJobStore, ManPageIngestor
 from linux_rag.ingestion.schedule_store import ScheduleStore
+from linux_rag.llm import ResponseBuilder
+from linux_rag.retrieval import RetrievalPipeline
 from linux_rag.server.handlers import AdminHandler, CacheSnapshot
+from linux_rag.server.handlers.ask import AskHandler
 
 try:
     import yaml  # type: ignore[import-untyped]
@@ -253,6 +256,34 @@ class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
         raise NotImplementedError("ControlStack handler not implemented yet.")
 
 
+class _UnconfiguredEmbedder:
+    async def embed(self, *args: Any, **kwargs: Any) -> list[float]:
+        raise RuntimeError(
+            "Retrieval embedder is not configured; integrate a real embedding client to enable Ask."
+        )
+
+
+class _UnconfiguredVectorStore:
+    async def query(self, *args: Any, **kwargs: Any) -> list[Any]:
+        raise RuntimeError(
+            "Vector store client is not configured; connect the service to Weaviate to enable Ask."
+        )
+
+
+class _UnconfiguredReranker:
+    async def rerank(self, *args: Any, **kwargs: Any) -> list[Any]:
+        raise RuntimeError(
+            "Reranker is not configured; provide a ranking implementation to enable Ask."
+        )
+
+
+class _UnconfiguredLLMClient:
+    async def generate(self, *args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError(
+            "LLM client is not configured; connect ResponseBuilder to Ollama to enable Ask."
+        )
+
+
 def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Linux RAG gRPC service.")
     parser.add_argument(
@@ -392,6 +423,54 @@ def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
     return (disk_pct, total_bytes, total_entries)
 
 
+def _build_retrieval_pipeline(config: ServerConfig) -> RetrievalPipeline:
+    """Create the retrieval pipeline (placeholder components until wired)."""
+
+    embedder = _UnconfiguredEmbedder()
+    vector_store = _UnconfiguredVectorStore()
+    reranker = _UnconfiguredReranker()
+    pipeline = RetrievalPipeline(
+        embedder=embedder,
+        vector_store=vector_store,
+        reranker=reranker,
+    )
+    logger.debug(
+        "_build_retrieval_pipeline(config): Created retrieval pipeline placeholder data_root=%s",
+        config.data_root,
+    )
+    return pipeline
+
+
+def _build_response_builder(config: ServerConfig) -> ResponseBuilder:
+    """Instantiate the response builder backed by a placeholder LLM client."""
+
+    default_model = config.active_models[0] if config.active_models else "gemma3:1b"
+    builder = ResponseBuilder(
+        llm_client=_UnconfiguredLLMClient(),
+        default_model=default_model,
+    )
+    logger.debug(
+        "_build_response_builder(config): Created ResponseBuilder default_model=%s",
+        default_model,
+    )
+    return builder
+
+
+def _build_ask_handler(config: ServerConfig) -> AskHandler:
+    """Wire the Ask handler for the RagService dispatcher."""
+
+    handler = AskHandler(
+        retrieval_pipeline=_build_retrieval_pipeline(config),
+        response_builder=_build_response_builder(config),
+        cache={},
+    )
+    logger.debug(
+        "_build_ask_handler(config): Created AskHandler active_models=%s",
+        config.active_models,
+    )
+    return handler
+
+
 def _build_admin_handler(config: ServerConfig) -> AdminHandler:
     job_store = IngestionJobStore(config.ingestion_jobs_db)
     schedule_store = ScheduleStore(config.schedule_db_path)
@@ -432,7 +511,7 @@ def _build_admin_handler(config: ServerConfig) -> AdminHandler:
 def _create_server(config: ServerConfig) -> Server:
     server = grpc.aio.server()
     dispatcher = RagServiceDispatcher(
-        ask_handler=None,
+        ask_handler=_build_ask_handler(config),
         admin_handler=_build_admin_handler(config),
     )
     rag_service_pb2_grpc.add_RagServiceServicer_to_server(dispatcher, server)

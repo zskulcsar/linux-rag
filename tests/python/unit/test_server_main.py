@@ -106,3 +106,53 @@ def test_build_admin_handler_initializes_man_ingestor(monkeypatch, tmp_path) -> 
     assert created_kwargs["output_dir"] == config.manpage_output_dir
     assert handler.kwargs["man_ingestor"] is not None
     assert handler.kwargs["manpage_root"] == str(config.manpage_root)
+
+
+def test_build_ask_handler_wires_dependencies(monkeypatch) -> None:
+    fake_pipeline = object()
+    fake_builder = object()
+    captured: dict[str, Any] = {}
+
+    class FakeAskHandler:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(server_main, "_build_retrieval_pipeline", lambda config: fake_pipeline)
+    monkeypatch.setattr(server_main, "_build_response_builder", lambda config: fake_builder)
+    monkeypatch.setattr(server_main, "AskHandler", FakeAskHandler)
+
+    handler = server_main._build_ask_handler(server_main.ServerConfig())
+
+    assert isinstance(handler, FakeAskHandler)
+    assert captured["retrieval_pipeline"] is fake_pipeline
+    assert captured["response_builder"] is fake_builder
+    assert isinstance(captured["cache"], dict)
+
+
+def test_create_server_registers_handlers(monkeypatch) -> None:
+    fake_server = object()
+    monkeypatch.setattr(server_main.grpc.aio, "server", lambda: fake_server)
+
+    fake_admin = object()
+    fake_ask = object()
+    monkeypatch.setattr(server_main, "_build_admin_handler", lambda config: fake_admin)
+    monkeypatch.setattr(server_main, "_build_ask_handler", lambda config: fake_ask)
+
+    captured: dict[str, Any] = {}
+
+    def _capture(servicer, server) -> None:
+        captured["servicer"] = servicer
+        captured["server"] = server
+
+    monkeypatch.setattr(
+        server_main.rag_service_pb2_grpc,
+        "add_RagServiceServicer_to_server",
+        _capture,
+    )
+
+    server = server_main._create_server(server_main.ServerConfig())
+
+    assert server is fake_server
+    dispatcher = captured["servicer"]
+    assert dispatcher._ask_handler is fake_ask
+    assert dispatcher._admin_handler is fake_admin

@@ -6,9 +6,8 @@ import json
 import os
 import socket
 import subprocess
-import tempfile
+
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
