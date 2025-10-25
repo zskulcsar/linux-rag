@@ -44,8 +44,10 @@ services:
 ingestion:
   # Default man page root scanned during initial ingestion.
   manpage_root: /usr/share/man
+  # Directory where normalized man page text is stored for downstream ingestion.
+  manpage_output_dir: .././linux-rag/manpages
   # Local directory where extracted wiki content is staged.
-  wiki_extract_dir: ../tmp/linux-rag/kiwix/extracted
+  wiki_extract_dir: ../.tmp/linux-rag/kiwix/extracted
   # Suggested Kiwix archives to fetch on first run; can be overridden by CLI flags.
   default_wiki_archives:
     - gemma-essential

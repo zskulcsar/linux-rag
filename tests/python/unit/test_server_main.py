@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
+from typing import Any
 
 from linux_rag.server import main as server_main
 
@@ -54,3 +55,54 @@ def test_prepare_socket_falls_back_when_directory_is_read_only(tmp_path, monkeyp
         assert prepared.parent.resolve() == expected_parent.resolve()
     finally:
         shutil.rmtree(expected_parent, ignore_errors=True)
+
+
+def test_server_config_sets_manpage_output_from_data_root(tmp_path) -> None:
+    data_root = tmp_path / "data"
+    config = server_main.ServerConfig.from_mapping({"paths": {"data_root": str(data_root)}})
+
+    assert config.manpage_output_dir == data_root.resolve() / "manpages"
+
+
+def test_server_config_allows_manpage_output_override(tmp_path) -> None:
+    override = tmp_path / "custom" / "man"
+    config = server_main.ServerConfig.from_mapping(
+        {
+            "ingestion": {
+                "manpage_output_dir": str(override),
+            }
+        }
+    )
+
+    assert config.manpage_output_dir == override.resolve()
+
+
+def test_build_admin_handler_initializes_man_ingestor(monkeypatch, tmp_path) -> None:
+    created_kwargs: dict[str, Any] = {}
+
+    class FakeManPageIngestor:
+        def __init__(self, **kwargs: Any) -> None:
+            created_kwargs.update(kwargs)
+
+    class FakeAdminHandler:
+        def __init__(self, **kwargs: Any) -> None:
+            self.kwargs = kwargs
+
+    monkeypatch.setattr(server_main, "ManPageIngestor", FakeManPageIngestor)
+    monkeypatch.setattr(server_main, "AdminHandler", FakeAdminHandler)
+
+    config = server_main.ServerConfig(
+        data_root=tmp_path,
+        cache_dir=tmp_path / "cache",
+        manpage_root=tmp_path / "man",
+        manpage_output_dir=tmp_path / "processed",
+        ingestion_jobs_db=tmp_path / "jobs.db",
+        schedule_db_path=tmp_path / "schedule.db",
+    )
+
+    handler = server_main._build_admin_handler(config)
+
+    assert isinstance(handler, FakeAdminHandler)
+    assert created_kwargs["output_dir"] == config.manpage_output_dir
+    assert handler.kwargs["man_ingestor"] is not None
+    assert handler.kwargs["manpage_root"] == str(config.manpage_root)

@@ -22,7 +22,7 @@ import grpc  # type: ignore[import-untyped]
 from grpc.aio import Server  # type: ignore[import-untyped]
 
 from linux_rag.contracts import rag_service_pb2_grpc
-from linux_rag.ingestion import IngestionJobStore
+from linux_rag.ingestion import IngestionJobStore, ManPageIngestor
 from linux_rag.ingestion.schedule_store import ScheduleStore
 from linux_rag.server.handlers import AdminHandler, CacheSnapshot
 
@@ -48,6 +48,7 @@ class ServerConfig:
     data_root: Path = Path("/var/lib/linux-rag")
     cache_dir: Path = Path("/var/lib/linux-rag/cache")
     manpage_root: Path = Path("/usr/share/man")
+    manpage_output_dir: Path = Path("/var/lib/linux-rag/manpages")
     wiki_archives_dir: Path = Path("/var/lib/linux-rag/kiwix")
     wiki_extract_dir: Path = Path("/var/lib/linux-rag/kiwix/extracted")
     ingestion_jobs_db: Path = Path("/var/lib/linux-rag/state/ingestion_jobs.db")
@@ -71,6 +72,9 @@ class ServerConfig:
         ingestion_cfg = data.get("ingestion", {}) if isinstance(data, dict) else {}
         manpage_root = _resolve_path_value(
             ingestion_cfg.get("manpage_root"), Path("/usr/share/man")
+        )
+        manpage_output_dir = _resolve_path_value(
+            ingestion_cfg.get("manpage_output_dir"), data_root / "manpages"
         )
         wiki_extract_dir = _resolve_path_value(
             ingestion_cfg.get("wiki_extract_dir"), wiki_archives_dir / "extracted"
@@ -102,6 +106,7 @@ class ServerConfig:
             data_root=data_root,
             cache_dir=cache_dir,
             manpage_root=manpage_root,
+            manpage_output_dir=manpage_output_dir,
             wiki_archives_dir=wiki_archives_dir,
             wiki_extract_dir=wiki_extract_dir,
             ingestion_jobs_db=ingestion_jobs_db,
@@ -390,6 +395,7 @@ def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
 def _build_admin_handler(config: ServerConfig) -> AdminHandler:
     job_store = IngestionJobStore(config.ingestion_jobs_db)
     schedule_store = ScheduleStore(config.schedule_db_path)
+    man_ingestor = ManPageIngestor(output_dir=config.manpage_output_dir)
 
     def cache_snapshot() -> CacheSnapshot:
         disk_pct, total_bytes, total_entries = _compute_cache_stats(config.cache_dir)
@@ -407,6 +413,7 @@ def _build_admin_handler(config: ServerConfig) -> AdminHandler:
     handler = AdminHandler(
         job_store=job_store,
         schedule_store=schedule_store,
+        man_ingestor=man_ingestor,
         manpage_root=str(config.manpage_root),
         default_wiki_archives=config.default_wiki_archives,
         active_models=config.active_models,
