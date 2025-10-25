@@ -175,18 +175,24 @@ class ManPageIngestor:
                 last_refreshed_at=timestamp if refresh else None,
             )
             sources.append(knowledge)
+            self._logger.debug(
+                "ManPageIngestor.ingest(man_root, refresh, include_sections): Added man page to KnowledgeSource",
+                len(sources),
+                skipped,
+                len(errors),
+            )
 
-        return ManPageIngestionResult(
-            sources=sources,
-            processed_count=len(sources),
-            skipped_count=skipped,
-            errors=errors,
-        )
         self._logger.debug(
             "ManPageIngestor.ingest(man_root, refresh, include_sections): Completed ingestion processed=%s skipped=%s errors=%s",
             len(sources),
             skipped,
             len(errors),
+        )
+        return ManPageIngestionResult(
+            sources=sources,
+            processed_count=len(sources),
+            skipped_count=skipped,
+            errors=errors,
         )
 
     def _discover_man_pages(self, root: Path) -> Iterable[Path]:

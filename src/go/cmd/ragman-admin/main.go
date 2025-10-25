@@ -638,13 +638,16 @@ func startStackProcess(cmd *cobra.Command, cfg adminConfig) error {
 
 func launchServer(cmd *cobra.Command, configPath, socketPath string) error {
 	repoRoot := filepath.Dir(filepath.Dir(configPath))
+	entrypoint := filepath.Join(repoRoot, "src", "python", "linux_rag", "server", "main.py")
+	if _, err := os.Stat(entrypoint); err != nil {
+		return errorWithGuidance(cmd, fmt.Sprintf("server entrypoint not found: %v", err))
+	}
 	serverCmd := exec.CommandContext(
 		cmd.Context(),
 		"uv",
 		"run",
 		"python",
-		"-m",
-		"linux_rag.server.main",
+		entrypoint,
 		"--config",
 		configPath,
 		"--socket",
@@ -675,7 +678,7 @@ func launchServer(cmd *cobra.Command, configPath, socketPath string) error {
 
 	go func() {
 		if err := serverCmd.Wait(); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "linux_rag.server.main exited: %v\n", err)
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s exited: %v\n", entrypoint, err)
 		}
 	}()
 

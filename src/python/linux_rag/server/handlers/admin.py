@@ -122,6 +122,16 @@ class AdminHandler:
         self._active_models = tuple(active_models or ())
         self._clock = clock or _utcnow
         self._logger = logging.getLogger(__name__)
+        self._logger.debug(f"AdminHandler.__init__(...): Completed. Settings: "
+                            + f"_job_store={self._job_store}, "
+                            + f"_schedule_store={self._schedule_store}, "
+                            + f"_man_ingestor={self._man_ingestor}, "
+                            + f"_manpage_root={self._manpage_root}, "
+                            + f"_wiki_ingestor={self._wiki_ingestor}, "
+                            + f"_default_wiki_archives={self._default_wiki_archives}, "
+                            + f"_cache_stats_provider={self._cache_stats_provider}, "
+                            + f"_active_models={self._active_models}, "
+                            + f"_clock={self._clock}")
 
     async def run_ingestion(self, request, context) -> Any:
         """Handle RunIngestion RPC calls."""
