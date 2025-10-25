@@ -156,3 +156,40 @@ def test_create_server_registers_handlers(monkeypatch) -> None:
     dispatcher = captured["servicer"]
     assert dispatcher._ask_handler is fake_ask
     assert dispatcher._admin_handler is fake_admin
+
+
+def test_server_config_parses_service_endpoints() -> None:
+    config = server_main.ServerConfig.from_mapping(
+        {
+            "services": {
+                "weaviate": {
+                    "scheme": "https",
+                    "host": "search.internal",
+                    "port": 9090,
+                    "grpc_port": 6000,
+                    "class_name": "Doc",
+                    "properties": ["title", "source_path"],
+                },
+                "ollama": {
+                    "host": "ollama.internal",
+                    "port": 12345,
+                    "embedding_model": "embedding-x",
+                    "default_model": "gemma3:1b",
+                },
+            },
+            "retrieval": {
+                "result_limit": 7,
+            },
+        }
+    )
+
+    assert config.weaviate_scheme == "https"
+    assert config.weaviate_host == "search.internal"
+    assert config.weaviate_http_port == 9090
+    assert config.weaviate_grpc_port == 6000
+    assert config.weaviate_class_name == "Doc"
+    assert config.weaviate_properties == ("title", "source_path")
+    assert config.ollama_host == "ollama.internal"
+    assert config.ollama_port == 12345
+    assert config.embedding_model == "embedding-x"
+    assert config.retrieval_limit == 7

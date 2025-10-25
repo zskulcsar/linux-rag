@@ -25,7 +25,12 @@ from linux_rag.contracts import rag_service_pb2_grpc
 from linux_rag.ingestion import IngestionJobStore, ManPageIngestor
 from linux_rag.ingestion.schedule_store import ScheduleStore
 from linux_rag.llm import ResponseBuilder
-from linux_rag.retrieval import RetrievalPipeline
+from linux_rag.retrieval import (
+    OllamaEmbedder,
+    RetrievalPipeline,
+    ScoreReranker,
+    WeaviateVectorStore,
+)
 from linux_rag.server.handlers import AdminHandler, CacheSnapshot
 from linux_rag.server.handlers.ask import AskHandler
 
@@ -58,6 +63,16 @@ class ServerConfig:
     schedule_db_path: Path = Path("/var/lib/linux-rag/state/refresh_schedule.db")
     default_wiki_archives: tuple[str, ...] = ()
     active_models: tuple[str, ...] = ()
+    ollama_host: str = "127.0.0.1"
+    ollama_port: int = 11434
+    embedding_model: str = "embeddinggemma"
+    weaviate_scheme: str = "http"
+    weaviate_host: str = "127.0.0.1"
+    weaviate_http_port: int = 8080
+    weaviate_grpc_port: int = 50051
+    weaviate_class_name: str = "KnowledgeSource"
+    weaviate_properties: tuple[str, ...] = ("title", "snippet", "source_path", "section")
+    retrieval_limit: int = 5
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "ServerConfig":
@@ -96,6 +111,26 @@ class ServerConfig:
             value = ollama_cfg.get(key)
             if value:
                 active_models.append(str(value))
+        embedding_model = _resolve_text(ollama_cfg.get("embedding_model"), "embeddinggemma")
+        ollama_host = _resolve_text(ollama_cfg.get("host"), "127.0.0.1")
+        ollama_port = _resolve_int(ollama_cfg.get("port"), 11434)
+
+        weaviate_cfg = services_cfg.get("weaviate", {})
+        weaviate_scheme = _resolve_text(weaviate_cfg.get("scheme"), "http")
+        weaviate_host = _resolve_text(weaviate_cfg.get("host"), "127.0.0.1")
+        weaviate_http_port = _resolve_int(weaviate_cfg.get("port"), 8080)
+        weaviate_grpc_port = _resolve_int(weaviate_cfg.get("grpc_port"), 50051)
+        weaviate_class_name = _resolve_text(weaviate_cfg.get("class_name"), "KnowledgeSource")
+        weaviate_properties = tuple(
+            str(prop).strip()
+            for prop in weaviate_cfg.get(
+                "properties",
+                ("title", "snippet", "source_path", "section"),
+            )
+            if str(prop).strip()
+        )
+        retrieval_cfg = data.get("retrieval", {}) if isinstance(data, dict) else {}
+        retrieval_limit = _resolve_int(retrieval_cfg.get("result_limit"), 5)
         logger.debug(
             "ServerConfig.from_mapping(data): Generated ServerConfig socket=%s log_level=%s data_root=%s cache_dir=%s",
             socket_endpoint,
@@ -116,6 +151,16 @@ class ServerConfig:
             schedule_db_path=schedule_db_path,
             default_wiki_archives=tuple(default_wiki_archives),
             active_models=tuple(active_models),
+            ollama_host=ollama_host,
+            ollama_port=ollama_port,
+            embedding_model=embedding_model,
+            weaviate_scheme=weaviate_scheme,
+            weaviate_host=weaviate_host,
+            weaviate_http_port=weaviate_http_port,
+            weaviate_grpc_port=weaviate_grpc_port,
+            weaviate_class_name=weaviate_class_name,
+            weaviate_properties=weaviate_properties or ("title", "snippet", "source_path", "section"),
+            retrieval_limit=retrieval_limit,
         )
 
 
@@ -171,6 +216,25 @@ def _resolve_path_value(value: Any, default: Path) -> Path:
             expanded = os.path.expanduser(expanded)
             candidate = Path(expanded) if expanded else default
     return candidate.expanduser().resolve()
+
+
+def _resolve_text(value: Any, default: str) -> str:
+    """Normalize textual configuration values."""
+    if isinstance(value, str):
+        text = value.strip()
+    elif value is None:
+        text = ""
+    else:
+        text = str(value).strip()
+    return text or default
+
+
+def _resolve_int(value: Any, default: int) -> int:
+    """Safely parse integer configuration values."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _fallback_socket_path(original: Path) -> Path:
@@ -254,27 +318,6 @@ class RagServiceDispatcher(rag_service_pb2_grpc.RagServiceServicer):
 
     async def ControlStack(self, request, context):  # type: ignore[override]
         raise NotImplementedError("ControlStack handler not implemented yet.")
-
-
-class _UnconfiguredEmbedder:
-    async def embed(self, *args: Any, **kwargs: Any) -> list[float]:
-        raise RuntimeError(
-            "Retrieval embedder is not configured; integrate a real embedding client to enable Ask."
-        )
-
-
-class _UnconfiguredVectorStore:
-    async def query(self, *args: Any, **kwargs: Any) -> list[Any]:
-        raise RuntimeError(
-            "Vector store client is not configured; connect the service to Weaviate to enable Ask."
-        )
-
-
-class _UnconfiguredReranker:
-    async def rerank(self, *args: Any, **kwargs: Any) -> list[Any]:
-        raise RuntimeError(
-            "Reranker is not configured; provide a ranking implementation to enable Ask."
-        )
 
 
 class _UnconfiguredLLMClient:
@@ -424,21 +467,32 @@ def _compute_cache_stats(cache_dir: Path) -> tuple[float, int, int]:
 
 
 def _build_retrieval_pipeline(config: ServerConfig) -> RetrievalPipeline:
-    """Create the retrieval pipeline (placeholder components until wired)."""
+    """Instantiate the retrieval pipeline with live dependencies."""
 
-    embedder = _UnconfiguredEmbedder()
-    vector_store = _UnconfiguredVectorStore()
-    reranker = _UnconfiguredReranker()
-    pipeline = RetrievalPipeline(
+    embedder = OllamaEmbedder(
+        host=config.ollama_host,
+        port=config.ollama_port,
+        model=config.embedding_model,
+    )
+    vector_store = WeaviateVectorStore(
+        scheme=config.weaviate_scheme,
+        host=config.weaviate_host,
+        port=config.weaviate_http_port,
+        grpc_port=config.weaviate_grpc_port,
+        class_name=config.weaviate_class_name,
+        properties=config.weaviate_properties,
+    )
+    reranker = ScoreReranker()
+    logger.debug(
+        "_build_retrieval_pipeline(config): Created retrieval pipeline embedding_model=%s class=%s",
+        config.embedding_model,
+        config.weaviate_class_name,
+    )
+    return RetrievalPipeline(
         embedder=embedder,
         vector_store=vector_store,
         reranker=reranker,
     )
-    logger.debug(
-        "_build_retrieval_pipeline(config): Created retrieval pipeline placeholder data_root=%s",
-        config.data_root,
-    )
-    return pipeline
 
 
 def _build_response_builder(config: ServerConfig) -> ResponseBuilder:
