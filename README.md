@@ -1,5 +1,7 @@
 # RAG System for Linux
 
+**Word of warning: do not try to use this repo. This is here only for historical purposes. The code is a mess but shows you how gpt-5.x were doing code around October 2025**
+
 ## Description
 
 A simple RAG system for Linux that runs locally. It should be using the man pages as well as some pre-defined wiki sources using kiwix. The aim here is to have a simple interface like `man` but with the ability to ask more complicated questions, rather than just bring up man.
